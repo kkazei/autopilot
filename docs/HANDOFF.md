@@ -32,7 +32,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `2b9d1d8` | fix: handle truncated reasoning-model replies and tighten repair prompt | yes |
 | (end of Day 1) | docs+data: first live post, traces and handoff (this file, `approved.jsonl`, the live and failed run traces) | yes |
 | `e48066d` | fix: harden publish path, banned-phrase matching and loop failure handling after independent review (R1-R10) | yes |
-| `3935a10` | feat: link facets with UTF-8 byte offsets and hardened URL boundary detection (Day 2 item (a)) | no |
+| `3935a10` | feat: link facets with UTF-8 byte offsets and hardened URL boundary detection (Day 2 item (a)) | yes |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
