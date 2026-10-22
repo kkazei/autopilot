@@ -8,7 +8,7 @@ Autopilot is an autonomous marketing agent system for a fictional small business
 
 - Python 3.11+, pydantic v2, pytest. Everything must run at $0: no paid APIs.
 
-- LLMs: OpenRouter free models (":free" ids) with tool calling and at least 64K context. Models are configured in one place (harness/[llm.py](http://llm.py)) as an ordered fallback chain. On HTTP 429 or timeout, back off, then try the next model.
+- LLMs: OpenRouter free models (":free" ids) with tool calling and at least 64K context. Models are configured in one place (harness/llm.py) as an ordered fallback chain. On HTTP 429 or timeout, back off, then try the next model.
 
 - Channel: Bluesky via the atproto package, using an app password from environment variables.
 
@@ -18,17 +18,17 @@ Autopilot is an autonomous marketing agent system for a fictional small business
 
 1. The orchestrator in loops/ owns control flow. Agents never decide to publish.
 
-2. Only harness code calls the publish\_post tool, and only after schema validation, brand-safety checks, the rate cap and (if enabled) human approval all pass.
+2. Only harness code calls the publish_post tool, and only after schema validation, brand-safety checks, the rate cap and (if enabled) human approval all pass.
 
-3. Every LLM call and tool call is written to the trace through harness/[trace.py](http://trace.py).
+3. Every LLM call and tool call is written to the trace through harness/trace.py.
 
-4. Every agent output is validated against a pydantic model in harness/[schemas.py](http://schemas.py). On invalid JSON: one repair attempt, then fail cleanly and log it.
+4. Every agent output is validated against a pydantic model in harness/schemas.py. On invalid JSON: one repair attempt, then fail cleanly and log it.
 
 5. The critic's passed flag is computed by the harness from the scores and a threshold, never taken from the model.
 
 6. Inner loop: at most 3 revisions, then escalate to human review. No unbounded loops anywhere.
 
-7. Each agent role has its own tool allowlist: planner and analyst are read-only, the writer only gets get\_brand\_brief, the critic gets no tools.
+7. Each agent role has its own tool allowlist: planner and analyst are read-only, the writer only gets get_brand_brief, the critic gets no tools.
 
 ## Working style
 
@@ -41,6 +41,8 @@ Autopilot is an autonomous marketing agent system for a fictional small business
 - Before large changes, state a short plan. After changes, list the files touched and how you verified them.
 
 - If something is ambiguous, ask instead of guessing.
+
+- No co-author or attribution trailers in commits or PRs.
 
 ## Definition of done for any task
 
