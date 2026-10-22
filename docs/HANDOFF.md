@@ -17,8 +17,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **Day:** Day 2 starts Fri Oct 23. The schedule runs Oct 22-24.
 - **First live post:** `run_20261022_092913_bde119`, `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a` (09:29 UTC). Writer and critic on minimax, passed on attempt 1, every guardrail passed, a human approved, 2 OpenRouter requests. Verified on the account's PDS. Record in `data/approved.jsonl`.
 - **Built today:** P1 harness core, `harness/llm.py` (fallback chain, backoff, budgets, repair, truncation handling), the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py` and `scripts/run_post.py`.
-- **Tests:** 229 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`), after the review fixes (187 at the last commit).
-- **Known gaps going into Day 2:** the URL in posts is plain text (local ISSUES_LOG 4.2, not in git); the critic passed a claim not in the brief (local ISSUES_LOG 7.4); `check_banned` misses variants (issue 17); the quota decision (issue 18). See the Day 2 start checklist in section 5.
+- **Tests:** 248 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (229 before Day 2 item (a)).
+- **Day 2 progress:** item (a), link facets, is done, live-verified and committed (`3935a10`). Next is (b), the critic fix.
+- **Known gaps remaining:** the critic passed a claim not in the brief (local ISSUES_LOG 7.4); the quota decision (issue 18). See the Day 2 start checklist in section 5.
 
 ## 3. Git state
 | Commit | What | Pushed |
@@ -30,6 +31,8 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `7ee2e88` | feat: writer, critic, inner loop, single publish path and run_post | yes |
 | `2b9d1d8` | fix: handle truncated reasoning-model replies and tighten repair prompt | yes |
 | (end of Day 1) | docs+data: first live post, traces and handoff (this file, `approved.jsonl`, the live and failed run traces) | yes |
+| `e48066d` | fix: harden publish path, banned-phrase matching and loop failure handling after independent review (R1-R10) | yes |
+| `3935a10` | feat: link facets with UTF-8 byte offsets and hardened URL boundary detection (Day 2 item (a)) | no |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
@@ -65,7 +68,12 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - [x] Reported both gaps before step 5: `check_banned` variants (issue 17) and the free-tier limit (issue 18).
 
 ### Day 2 start checklist (in this order)
-- [ ] **(a) Link facets** for URLs in `mcp_server/bluesky.py` (local ISSUES_LOG 4.2, not in git). Byte offsets in UTF-8, with a test that has a multi-byte character before the URL.
+- [x] **(a) Link facets** for URLs in `mcp_server/bluesky.py` (local ISSUES_LOG 4.2, not in git), committed as `3935a10`.
+  - UTF-8 byte offsets; tests cover multi-byte text before, between and around URLs, plus a seeded property test (300 random posts) and a facet-build failure test. 248 tests pass on both interpreters; 11 mutation checks all killed.
+  - An independent verification pass found and fixed 7 URL-boundary defects: curly quotes, non-ASCII punctuation (`…`, `—`, `。`), `<>`, balanced `)` or `]` (Wikipedia style), uppercase scheme, hostless matches (`https://...`), and a glued combining accent.
+  - **Accepted trade-offs:** a URL with a non-ASCII path (like `/café`) is not linked at all, rather than linked half-way; bare domains without `http(s)://` are not linked.
+  - **Live check passed** (Oct 22): one test post through `bluesky.post()`. The PDS record had exactly one `#link` facet at bytes 37-67 slicing to the URL, offsets differing from the character index (33), and the AppView showed the facet. The post was deleted and confirmed `RecordNotFound`. It bypassed the harness, so it is not in `approved.jsonl` and does not count toward the rate cap.
+  - The dry run could not exercise the facet code (dry runs never reach `bluesky.post`), and `--dry-run` still calls OpenRouter, so it was run in-process with a scripted LLM.
 - [ ] **(b) Critic fix** (local ISSUES_LOG 7.4, not in git): give the critic the planned post (topic and angle), and a rule that any factual claim not in the brief or the planned post caps `policy_risk` at 3.
 - [x] **(c) `check_banned` variants** (issue 17): done early, as review item 27 (inflections, spaced/dotted letters, no-space forms, `banned_variants` in the brief).
 - [ ] **(d) Decide the quota question** (issue 18): stay at 50 requests/day on $0, or not.
@@ -185,12 +193,12 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 14 | Test network guard doesn't block DNS lookups | Open, low |
 | 15 | Narrow stale-lock race after a crash | Open, low |
 | 16 | `get_post_metrics` raises `BlueskyNotFound` when called right after posting, because the AppView hasn't indexed the post yet (seen in the step 4 throwaway post). It should retry briefly or treat a very new post as "not yet indexed", never as deleted, and the analyst must not read it as a deleted post | Open, D2-A |
-| 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | **Fixed** by review item 27 (uncommitted) |
+| 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | **Fixed** by review item 27 (committed in `e48066d`) |
 | 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36. Decide before Day 2 | Open, decide before Day 2 |
-| 19 | URL in posts is plain text (no link facets); confirmed on the first live post | Open, Day 2 checklist (a); local ISSUES_LOG 4.2 (not in git) |
+| 19 | URL in posts is plain text (no link facets); confirmed on the first live post | **Fixed** (`3935a10`), live-verified; local ISSUES_LOG 4.2 (not in git) still says Open |
 | 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | Open, Day 2 checklist (b); local ISSUES_LOG 7.4 (not in git) |
 
-**Independent review of `feat/hermes-runtime` (Oct 22, end of Day 1).** Each item was reproduced with a failing offline test before it was fixed. Items 21-24 were also mutation-checked (each fix reverted makes a test fail). Uncommitted until the user names the files.
+**Independent review of `feat/hermes-runtime` (Oct 22, end of Day 1).** Each item was reproduced with a failing offline test before it was fixed. Items 21-24 were also mutation-checked (each fix reverted makes a test fail). Committed in `e48066d`.
 
 | # | Review finding | Status |
 |---|---|---|
@@ -307,4 +315,5 @@ Kept from the original handoff. Build this only after the first live post, withi
 - Do not redo or re-ask settled decisions (section 4). Do not invent MCP tools or rename the PDF's files without a reason.
 - Follow CLAUDE.md's definition of done: tests pass, no secrets in the diff, trace verified by running once, and a 3-line summary.
 - **Never add attribution trailers to commits or PRs.**
-- **Next action:** Day 2 starts with the checklist in section 5, item (a). Wait for the user's go.
+- **Next action:** Day 2 item (b), the critic fix (planned for Fri Oct 23). State a plan and wait for the user's go. Item (d), the quota decision, is the user's and should come before live posting starts.
+- **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
