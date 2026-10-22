@@ -8,6 +8,7 @@ server exposes, so the server's call log and checks still apply.
 
 from __future__ import annotations
 
+import inspect
 import json
 from typing import Any
 
@@ -60,12 +61,20 @@ class ToolDispatcher:
             trace.log_event(self.run_id, self.role, "tool_call", summary_in,
                             f"refused: {name!r} is not in the {self.role} allowlist", ok=False)
             return json.dumps({"error": f"tool {name!r} is not available to you"})
+        tool = server.TOOLS[name]
         with trace.step(self.run_id, self.role, "tool_call", summary_in) as s:
             try:
-                result = json.dumps(server.TOOLS[name](**args), ensure_ascii=False, default=str)
-            except (server.ToolRefused, TypeError) as e:
-                s.ok = False
-                result = json.dumps({"error": str(e)})
+                # Bind first, so a wrong argument is told apart from a TypeError raised inside the tool.
+                inspect.signature(tool).bind(**args)
+            except TypeError as e:
+                s.ok, result = False, json.dumps({"error": f"invalid arguments: {e}"})
+            else:
+                try:
+                    result = json.dumps(tool(**args), ensure_ascii=False, default=str)
+                except server.ToolRefused as e:
+                    s.ok, result = False, json.dumps({"error": str(e)})
+                except Exception as e:  # noqa: BLE001 - a broken tool must not crash the agent; the model gets an error
+                    s.ok, result = False, json.dumps({"error": f"tool failed: {type(e).__name__}"})
             s.summary_out = result
         return result
 

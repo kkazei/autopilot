@@ -17,7 +17,7 @@ from harness import trace
 from harness.fileio import read_jsonl
 from harness.llm import LLMUnavailable, MockLLM
 from harness.publish import PublishRefused, _harness_env, approved_path, publish
-from harness.schemas import Critique, Draft
+from harness.schemas import BrandBrief, Critique, Draft
 from mcp_server import bluesky, server
 from scripts import run_post
 
@@ -71,7 +71,8 @@ def run(argv, script, answers=("y",)):
 
 
 def approved() -> list[dict]:
-    return read_jsonl(approved_path())[0]
+    """Published rows only; each publish also writes a pending row first."""
+    return [r for r in read_jsonl(approved_path())[0] if r.get("status") == "published"]
 
 
 def published_calls(data: Path) -> list[dict]:
@@ -171,13 +172,15 @@ def critique(n: int) -> Critique:
 DRAFT = Draft(post_id="post_x", text="Warm rye.", attempt=1)
 
 
-@pytest.mark.parametrize("crit, gate", [(critique(3), {"ok": True}), (critique(5), {"ok": False, "reasons": ["x"]}),
-                                        (critique(5), {})])
-def test_publish_refuses_unless_critique_and_guardrails_pass(env, bsky, crit, gate):
+BRIEF = BrandBrief.model_validate_json((REPO_ROOT / "data" / "brand_brief.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("crit, ok_by_human", [(critique(3), True), (critique(5), False)])
+def test_publish_refuses_below_threshold_or_without_approval(env, bsky, crit, ok_by_human):
     run_id = trace.start_run()
     with pytest.raises(PublishRefused):
-        publish(run_id, DRAFT, crit, gate, dry_run=False)
-    assert bsky == [] and published_calls(env) == []
+        publish(run_id, DRAFT, crit, BRIEF, approved=ok_by_human, dry_run=False, clock=lambda: NOW)
+    assert bsky == [] and published_calls(env) == [] and not approved_path().exists()
 
 
 def test_harness_env_is_restored_after_the_call(monkeypatch):
@@ -200,3 +203,23 @@ def test_publish_token_never_reaches_the_trace_or_logs(env, bsky, monkeypatch):
     run_file = sorted((env / "runs").glob("*.json"))[0].read_text(encoding="utf-8")
     calls = (env / "calls.jsonl").read_text(encoding="utf-8")
     assert token not in run_file and token not in calls and token not in approved_path().read_text(encoding="utf-8")
+
+
+# ---------- review item 8 ----------
+
+@pytest.mark.parametrize("brief_text", [None, '{"name": "x"}', "not json"])
+def test_missing_or_invalid_brief_exits_cleanly_without_a_trace(env, bsky, brief_text):
+    path = env / "brand_brief.json"
+    if brief_text is None:
+        path.unlink()
+    else:
+        path.write_text(brief_text, encoding="utf-8")
+    code, llm, _ = run([], [GOOD, scores()])
+    assert code == run_post.EXIT_REFUSED and llm.calls == [] and not (env / "runs").exists()
+
+
+def test_planned_post_day_is_the_utc_date(env, bsky):
+    late_utc = datetime(2026, 1, 1, 0, 30, tzinfo=timezone.utc)
+    llm = MockLLM([GOOD, scores()])
+    run_post.main(["--topic", "x", "--dry-run", "--no-approve"], llm=llm, now=late_utc, env_file=None)
+    assert '"day": "2026-01-01"' in llm.calls[0][-1]["content"]

@@ -25,7 +25,8 @@ class Attempt:
 
 @dataclass
 class InnerResult:
-    """`failed` means a model or chain error (nothing to review); `escalated` means 3 drafts a human should see."""
+    """`failed` means a model or chain error before any draft existed; `escalated` means drafts a human should see
+    (3 below the threshold, or fewer when a model error cut the loop short; `error` then says why)."""
 
     status: Status
     post_id: str
@@ -47,12 +48,15 @@ def run_inner(llm: LLM, run_id: str, planned: PlannedPost, brief: BrandBrief, *,
         try:
             draft = writer.write(llm, run_id, planned, brief, n,
                                  feedback=previous.critique if previous else None,
-                                 previous=previous.draft if previous else None)
+                                 previous=previous.draft if previous else None, min_score=min_score)
             scored = critic.critique(llm, run_id, draft, planned, brief, min_score)
         except LLMError as e:
+            result.error = f"{type(e).__name__}: {e}"
+            # Rule 6: once a draft exists, a human reviews it. "failed" is only for a run with nothing to show.
+            result.status = "escalated" if result.attempts else "failed"
+            verdict = "escalate to human review after a model error" if result.attempts else "failed"
             trace.log_event(run_id, "harness", "decision", f"inner loop {planned.id} attempt {n}",
-                            f"failed: {type(e).__name__}: {e}", ok=False)
-            result.status, result.error = "failed", f"{type(e).__name__}: {e}"
+                            f"{verdict}: {result.error}", ok=False)
             return result
         previous = Attempt(draft, scored)
         result.attempts.append(previous)

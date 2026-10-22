@@ -95,6 +95,8 @@ class BrandBrief(BaseModel):
     do: list[str]
     dont: list[str]
     banned_phrases: list[str]
+    # Wordings the matcher's inflection and spacing rules cannot reach ("results guaranteed", "do not miss out").
+    banned_variants: list[str] = Field(default_factory=list)
     goal: str = Field(min_length=1)
     cta_url: str = Field(pattern=r"^https?://\S+$")
 

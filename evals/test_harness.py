@@ -608,3 +608,42 @@ def test_repair_prompt_states_actual_length_target_and_no_thinking_aloud(run_id)
                                            ('{"limit": 3}', {"limit": 3}), ({"a": 1}, {"a": 1})])
 def test_tool_args_never_crash_the_loop(raw, expected):
     assert llm._tool_args(raw) == expected
+
+
+# ---------- review item 7 / issue 17: banned-phrase variants ----------
+
+REAL_BRIEF = json.loads((REPO_ROOT / "data" / "brand_brief.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("text", [
+    "Sourdough cures everything",            # inflection
+    "It cured my cravings",
+    "Slow fermentation is curing me",
+    "c u r e for boredom",                   # spaced letters
+    "c.u.r.e for boredom",                   # dotted letters
+    "a.c.t now, seats are going",            # dotted letters starting with "a" (not an article here)
+    "Actnow while seats last",               # no-space form
+    "Glutenfree loaves this week",
+    "glu-ten-free loaves this week",         # split form
+    "Dont miss out on Saturday",             # missing apostrophe
+    "Guaranteed result for every baker",     # singular
+    "Voted the best bakery in the town",     # filler article
+    "A curative crumb",                      # variants list in the brief
+    "Results guaranteed, every time",
+    "Do not miss out on Saturday",
+])
+def test_check_banned_catches_variants(text):
+    result = guardrails.check_banned(text, REAL_BRIEF)
+    assert not result["ok"], text
+
+
+@pytest.mark.parametrize("text", [
+    "Our crust is secure and crackly.",
+    "Procure a little patience; the dough will rise.",
+    "Currant buns and a curious crowd.",
+    "React now and then, but mostly wait for the dough.",
+    "The best bread in town is the one you bake yourself.",
+    "Click the link here if you fancy a seat.",
+])
+def test_check_banned_does_not_block_ordinary_words(text):
+    assert guardrails.check_banned(text, REAL_BRIEF)["ok"], text

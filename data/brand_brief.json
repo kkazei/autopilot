@@ -26,6 +26,11 @@
     "click here",
     "don't miss out"
   ],
+  "banned_variants": [
+    "results guaranteed",
+    "do not miss out",
+    "curative"
+  ],
   "goal": "Drive signups for the Saturday beginner sourdough class.",
   "cta_url": "https://example.com/bramblewick/classes"
 }

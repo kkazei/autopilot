@@ -14,16 +14,27 @@ Exit codes: 0 published, 2 refused by flags or config, 3 escalated, 4 failed, 5 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import secrets
 import sys
 from collections.abc import Callable, Sequence
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from pathlib import Path
+
+from pydantic import ValidationError
 
 from harness import guardrails, trace
 from harness.env import load_dotenv
 from harness.llm import LLM, LLMError, OpenRouterLLM
-from harness.publish import live_records, publish
+from harness.publish import (
+    ApprovedLogError,
+    Clock,
+    PublishBlocked,
+    PublishRefused,
+    live_records,
+    publish,
+    utc_now,
+)
 from harness.schemas import BrandBrief, PlannedPost
 from loops.inner import run_inner
 
@@ -49,37 +60,54 @@ def _say(message: str) -> None:
 
 def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
          input_fn: Callable[[str], str] = input, now: datetime | None = None,
-         env_file: Path | None = DEFAULT_ENV_FILE) -> int:
-    """Tests inject `llm`, `input_fn` and `now`, and pass env_file=None so the real .env never loads."""
+         clock: Clock | None = None, env_file: Path | None = DEFAULT_ENV_FILE) -> int:
+    """Tests inject `llm`, `input_fn` and `now` or `clock`, and pass env_file=None so the real .env never loads."""
     args = parse_args(argv)
     if not args.approve and not args.dry_run:
         _say("refused: --no-approve is only allowed together with --dry-run")
         return EXIT_REFUSED
     if env_file is not None:
         load_dotenv(env_file)
-    now = now or datetime.now(timezone.utc)
+    # Tests pin the clock; a real run reads it again at publish time, after the approval wait.
+    if clock is None:
+        clock = (lambda: now) if now is not None else utc_now
+    now = clock()
 
-    run_id = trace.start_run()
-    trace.log_event(run_id, "harness", "decision", f"run_post | topic={args.topic!r} goal={args.goal}",
-                    f"start: dry_run={args.dry_run} approval={args.approve} min_score={args.min_score}", ok=True)
-    _say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve})")
-
-    published = live_records()
-    cap = guardrails.check_rate_cap(now, published)
-    if not cap["ok"]:
-        trace.log_event(run_id, "harness", "decision", "rate cap pre-check", "; ".join(cap["reasons"]), ok=False)
-        _say("blocked before writing: " + "; ".join(cap["reasons"]))
-        return EXIT_BLOCKED
-
-    brief = BrandBrief.model_validate_json((trace.data_dir() / "brand_brief.json").read_text(encoding="utf-8"))
-    planned = PlannedPost(id=f"post_{secrets.token_hex(4)}", day=date.today(), topic=args.topic,
-                          angle=args.angle, goal=args.goal)
+    # Config problems are refused before a trace exists, so they never leave an empty run behind.
+    try:
+        brief = BrandBrief.model_validate_json((trace.data_dir() / "brand_brief.json").read_text(encoding="utf-8"))
+    except OSError as e:
+        _say(f"refused: brand brief could not be read ({type(e).__name__})")
+        return EXIT_REFUSED
+    except ValidationError as e:
+        _say(f"refused: brand brief is invalid ({e.error_count()} errors)")
+        return EXIT_REFUSED
     try:
         llm = llm or OpenRouterLLM()
     except LLMError as e:
         _say(f"refused: {e}")
         return EXIT_REFUSED
 
+    run_id = trace.start_run()
+    trace.log_event(run_id, "harness", "decision", f"run_post | topic={args.topic!r} goal={args.goal}",
+                    f"start: dry_run={args.dry_run} approval={args.approve} min_score={args.min_score}", ok=True)
+    _say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve})")
+
+    try:
+        published = live_records()
+    except ApprovedLogError as e:
+        trace.log_event(run_id, "harness", "decision", "approved log pre-check", str(e), ok=False)
+        _say(f"blocked before writing: {e}")
+        return EXIT_BLOCKED
+    cap = guardrails.check_rate_cap(now, published)
+    if not cap["ok"]:
+        trace.log_event(run_id, "harness", "decision", "rate cap pre-check", "; ".join(cap["reasons"]), ok=False)
+        _say("blocked before writing: " + "; ".join(cap["reasons"]))
+        return EXIT_BLOCKED
+
+    # The post's day is the UTC date, like every other timestamp the harness writes.
+    planned = PlannedPost(id=f"post_{secrets.token_hex(4)}", day=now.astimezone(timezone.utc).date(),
+                          topic=args.topic, angle=args.angle, goal=args.goal)
     result = run_inner(llm, run_id, planned, brief, min_score=args.min_score)
     for i, a in enumerate(result.attempts, 1):
         c = a.critique
@@ -89,7 +117,8 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         _say(f"\nfailed: {result.error}")
         return EXIT_FAILED
     if result.status == "escalated":
-        _say(f"\nescalated after {len(result.attempts)} attempts: needs human review; nothing published")
+        cause = f" (stopped by a model error: {result.error})" if result.error else ""
+        _say(f"\nescalated after {len(result.attempts)} attempts{cause}: needs human review; nothing published")
         return EXIT_ESCALATED
 
     final = result.final
@@ -103,8 +132,31 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         _say("\nblocked: " + "; ".join(gate["reasons"]))
         return EXIT_BLOCKED
 
-    record = publish(run_id, final.draft, final.critique, gate, dry_run=args.dry_run, min_score=args.min_score)
-    trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"published: {record['uri']}", ok=True)
+    try:
+        # publish() re-checks everything itself under its lock; the only thing it takes from here is the approval.
+        record = publish(run_id, final.draft, final.critique, brief, approved=True, dry_run=args.dry_run,
+                         min_score=args.min_score, clock=clock)
+    except PublishBlocked as e:
+        trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"blocked at publish: {e}", ok=False)
+        _say(f"\nblocked at publish time: {e}")
+        return EXIT_BLOCKED
+    except PublishRefused as e:
+        trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"refused: {e}", ok=False)
+        _say(f"\nrefused: {e}")
+        return EXIT_REFUSED
+    except Exception as e:  # noqa: BLE001 - any client error here may mean the post is live; report, never retry
+        with contextlib.suppress(trace.TraceWriteError):
+            trace.log_event(run_id, "harness", "decision", f"publish {planned.id}",
+                            f"failed, outcome unknown: {type(e).__name__}: {e}", ok=False)
+        _say(f"\npublish failed and the outcome is unknown ({type(e).__name__}: {e}). Check the account before "
+             "retrying; the pending row keeps counting toward the rate cap.")
+        return EXIT_FAILED
+    # The post is out: bookkeeping problems are reported, never turned into a failure.
+    with contextlib.suppress(trace.TraceWriteError):
+        trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"published: {record['uri']}",
+                        ok=True)
+    for warning in record["warnings"]:
+        _say(f"warning: {warning}")
     _say(f"\npublished: {record['uri']}\ntrace: {trace.run_path(run_id)}")
     return EXIT_PUBLISHED
 

@@ -17,7 +17,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **Day:** Day 2 starts Fri Oct 23. The schedule runs Oct 22-24.
 - **First live post:** `run_20261022_092913_bde119`, `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a` (09:29 UTC). Writer and critic on minimax, passed on attempt 1, every guardrail passed, a human approved, 2 OpenRouter requests. Verified on the account's PDS. Record in `data/approved.jsonl`.
 - **Built today:** P1 harness core, `harness/llm.py` (fallback chain, backoff, budgets, repair, truncation handling), the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py` and `scripts/run_post.py`.
-- **Tests:** 187 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`).
+- **Tests:** 229 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`), after the review fixes (187 at the last commit).
 - **Known gaps going into Day 2:** the URL in posts is plain text (local ISSUES_LOG 4.2, not in git); the critic passed a claim not in the brief (local ISSUES_LOG 7.4); `check_banned` misses variants (issue 17); the quota decision (issue 18). See the Day 2 start checklist in section 5.
 
 ## 3. Git state
@@ -67,7 +67,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 ### Day 2 start checklist (in this order)
 - [ ] **(a) Link facets** for URLs in `mcp_server/bluesky.py` (local ISSUES_LOG 4.2, not in git). Byte offsets in UTF-8, with a test that has a multi-byte character before the URL.
 - [ ] **(b) Critic fix** (local ISSUES_LOG 7.4, not in git): give the critic the planned post (topic and angle), and a rule that any factual claim not in the brief or the planned post caps `policy_risk` at 3.
-- [ ] **(c) `check_banned` variants** (issue 17): prefix matching, no-space forms, and a variants list in the brief.
+- [x] **(c) `check_banned` variants** (issue 17): done early, as review item 27 (inflections, spaced/dotted letters, no-space forms, `banned_variants` in the brief).
 - [ ] **(d) Decide the quota question** (issue 18): stay at 50 requests/day on $0, or not.
 - [ ] **(e) Start posting early** with `scripts/run_post.py` (live, approval on) to build real engagement data. The 60-minute gap means 3-5 posts take 3+ hours of wall time.
 - [ ] **(f) D2-A:** metrics, analyst, learnings, planner, outer loop (and issue 16, read-after-post).
@@ -178,17 +178,32 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 7 | Nothing committed | **Resolved** (`f774123`, `d10bb10`, pushed) |
 | 8 | Handoff only in a temp folder | **Resolved** (this file, committed at the end of Day 1) |
 | 9 | `CLAUDE.md` paste artifacts | **Resolved** (`d10bb10`) |
-| 10 | Tests never run on 3.11 | **Resolved** (`.venv311`, 187 pass on 3.11 and 3.14) |
+| 10 | Tests never run on 3.11 | **Resolved** (`.venv311`; 229 pass on 3.11 and 3.14) |
 | 11 | The handoff said the main branch was `main` | **Resolved** (it's `master`) |
 | 12 | Call log written after the tool returns, so a failure after a real post is mis-logged | **Resolved** (`cd0e1f2`: pending record before the Bluesky call; seen in the live post's call log) |
 | 13 | `check_banned` matches whole words only ("cures" slips past "cure") | Reported; tracked as issue 17 |
 | 14 | Test network guard doesn't block DNS lookups | Open, low |
 | 15 | Narrow stale-lock race after a crash | Open, low |
 | 16 | `get_post_metrics` raises `BlueskyNotFound` when called right after posting, because the AppView hasn't indexed the post yet (seen in the step 4 throwaway post). It should retry briefly or treat a very new post as "not yet indexed", never as deleted, and the analyst must not read it as a deleted post | Open, D2-A |
-| 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | Open, before D2-D |
+| 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | **Fixed** by review item 27 (uncommitted) |
 | 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36. Decide before Day 2 | Open, decide before Day 2 |
 | 19 | URL in posts is plain text (no link facets); confirmed on the first live post | Open, Day 2 checklist (a); local ISSUES_LOG 4.2 (not in git) |
 | 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | Open, Day 2 checklist (b); local ISSUES_LOG 7.4 (not in git) |
+
+**Independent review of `feat/hermes-runtime` (Oct 22, end of Day 1).** Each item was reproduced with a failing offline test before it was fixed. Items 21-24 were also mutation-checked (each fix reverted makes a test fail). Uncommitted until the user names the files.
+
+| # | Review finding | Status |
+|---|---|---|
+| 21 (R1) | After Bluesky accepts a post, a failed call-log or `approved.jsonl` write raised, so the run reported "failed" and the row was lost; the next run could post again | **Fixed**: `publish()` writes a `pending` row before the post and a `published` row after; post-success write failures become warnings; `server._logged` no longer raises on a lost log line; an unsettled pending row counts toward the rate cap and duplicate check; an unknown outcome exits 4 and keeps counting |
+| 22 (R2) | `live_records()` skipped unreadable lines in `approved.jsonl`, so the rate cap could undercount | **Fixed**: any unreadable line raises `ApprovedLogError`; the run is blocked (exit 5) |
+| 23 (R3) | `publish()` trusted a caller-supplied gate dict | **Fixed**: `publish()` re-runs length, banned, rate cap and duplicate on the exact text it sends, and takes only the human's approval from the caller |
+| 24 (R4) | Two overlapping runs could both pass the rate cap; `now` was taken before the approval wait | **Fixed**: one lock (`data/publish.lock`) around re-check, pending row, post and result row; publish reads a fresh clock |
+| 25 (R5) | A model error on attempt 2 or 3 returned "failed" and dropped the drafts | **Fixed**: escalates to human review with the drafts and the error (rule 6); "failed" only when no draft exists |
+| 26 (R6) | Unexpected tool exceptions crashed the agent; a TypeError inside a tool looked like bad arguments | **Fixed**: arguments are bound first ("invalid arguments"); other exceptions become a "tool failed: <type>" result |
+| 27 (R7) | `check_banned` missed inflections, spaced and dotted letters, no-space forms (issue 17) | **Fixed**: inflection forms per word, joined single letters, articles ignored, no-space and split forms, and `banned_variants` in the brief (`results guaranteed`, `do not miss out`, `curative`). No false positives on the real posts or the brief. Issue 17 closed |
+| 28 (R8) | A missing or invalid brief crashed after the trace was created; the post day was the local date | **Fixed**: the brief and the LLM config are checked before the trace exists (exit 2, no trace); the day is the UTC date |
+| 29 (R9) | The writer's revision prompt said "4 or more" whatever `--min-score` was | **Fixed**: uses the actual `min_score` |
+| 30 (R10) | Stale-lock race (issue 15) | **Left as is**: the publish lock does not cover it. It holds for seconds, far below the 60-second stale threshold, so a live lock is not broken in practice |
 
 ## 8. Environment facts
 - **Python:** system and `.venv` are both 3.14.8. `.venv311` is 3.11.16 (installed with the user's `~/.local/bin/uv`, not Hermes's). Both have `requirements.txt` installed: `mcp==2.0.0`, `pydantic 2.14.1`, `atproto==0.0.73`, `pytest 9.1.1`. Run tests in both: `.venv/Scripts/python.exe -m pytest -q` and `.venv311/Scripts/python.exe -m pytest -q`.
@@ -198,6 +213,19 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
   - The user's global Hermes config uses a non-free provider. **Never touch it**; always run with an isolated, temporary `HERMES_HOME`.
   - Check the pinned commit with `git -C <install>/hermes-agent rev-parse HEAD`, **not** `hermes --version` (that triggers a network update check).
 - **`.env`:** `OPENROUTER_API_KEY`, `OPENROUTER_MODELS`, `BLUESKY_HANDLE` and `BLUESKY_APP_PASSWORD` all have values. **Never print or log them**; report presence only.
+- **Recovering an unfinished "pending" row** (a crash or an unknown outcome during publish). An unsettled pending row counts as a post, so it blocks publishing for 60 minutes (gap) and counts toward the 24-hour cap until it is settled. Run these in Git Bash from the repo root, with no `run_post` running. The commands were tested offline on a scratch data folder.
+  1. List the unsettled rows:
+     `.venv/Scripts/python.exe -c "from harness.publish import live_records; [print(r['post_id'], r['posted_at'], r['text']) for r in live_records() if r.get('status') == 'pending']"`
+     The matching `run_id` is on the same `pending` line in `data/approved.jsonl`.
+  2. Check whether the post is live, against the account's PDS (the source of truth; the AppView can lag, issue 16). Either open the profile in the Bluesky app, or read the latest records (read-only, no login):
+     `curl -s "https://bsky.social/xrpc/com.atproto.repo.listRecords?repo=<DID>&collection=app.bsky.feed.post&limit=10"`
+     Look for the same text; note its `uri` and `value.createdAt`.
+  3. Settle the row. Append one line through the locked writer; never edit or delete earlier lines.
+     - **Not on the account:**
+       `.venv/Scripts/python.exe -c "import sys; from harness.fileio import append_jsonl; from harness.publish import approved_path; run_id, post_id = sys.argv[1:3]; append_jsonl(approved_path(), {'status': 'failed', 'run_id': run_id, 'post_id': post_id, 'reason': 'settled by hand: not on the account'})" <run_id> <post_id>`
+     - **Live:** record it with its real time, so the rate cap measures from the actual post:
+       `.venv/Scripts/python.exe -c "import sys; from harness.fileio import append_jsonl; from harness.publish import approved_path; run_id, post_id, uri, created_at, text = sys.argv[1:6]; append_jsonl(approved_path(), {'status': 'published', 'run_id': run_id, 'post_id': post_id, 'text': text, 'uri': uri, 'posted_at': created_at, 'dry_run': False, 'reason': 'settled by hand: found on the account'})" <run_id> <post_id> <uri> <createdAt> "<text>"`
+  4. Run step 1 again; the row should be gone. If unsure whether it is live, leave it pending: it only delays the next post.
 - **Data paths:** `AUTOPILOT_DATA_DIR` overrides `data/`. The MCP call log goes to `AUTOPILOT_TOOL_LOG`, defaulting to `data/runtime/mcp_calls.jsonl` (git-ignored).
 
 ## 9. P2 reference: verified Hermes behavior and the Tier A design

@@ -35,7 +35,7 @@ from typing import Any
 from mcp.server import MCPServer
 from pydantic import ValidationError
 
-from harness.fileio import append_jsonl, read_jsonl
+from harness.fileio import LockTimeout, append_jsonl, read_jsonl
 from harness.schemas import MAX_POST_CHARS, BrandBrief, Learning
 from harness.trace import data_dir, redact
 from mcp_server import bluesky
@@ -100,7 +100,13 @@ def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
         finally:
             _receipt.reset(token)
             record["latency_ms"] = int((time.perf_counter() - started) * 1000)
-            append_jsonl(call_log_path(), record)
+            try:
+                append_jsonl(call_log_path(), record)
+            except (OSError, LockTimeout) as e:
+                # The tool already ran (for publish_post the post may be live). Raising here would turn a real
+                # post into a reported failure and lose its result, so the lost log line goes to stderr instead.
+                print(f"autopilot: call log write failed for {fn.__name__} receipt {record['receipt']}: "
+                      f"{type(e).__name__}", file=sys.stderr)
 
     return wrapper
 
