@@ -2,3 +2,5 @@
 .venv/
 __pycache__/
 vendor/hermes-agent/
+.hermes_spike/
+data/runtime/

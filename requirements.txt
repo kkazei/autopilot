@@ -1,0 +1,8 @@
+# Runtime
+mcp==2.0.0          # official MCP SDK: the tool server and the harness's MCP client
+pydantic>=2,<3      # data contracts; also pulled in by mcp, pinned here because we import it directly
+
+# Tests
+pytest==9.1.1
+
+# Deferred: atproto (live Bluesky client) is added with the real client, not before.
