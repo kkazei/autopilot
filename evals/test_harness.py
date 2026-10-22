@@ -506,3 +506,57 @@ def test_mock_llm_logs_like_the_real_chain_and_raises_when_exhausted(run_id):
         mock.chat(run_id, "analyst", MSGS)
     [event] = trace.read_run(run_id)
     assert event.kind == "llm_call" and event.model == "mock/model:free"
+
+
+def test_budget_stops_the_chain_before_its_own_retry_limit(run_id):
+    client, transport, _ = chain(*[(429, "")] * 9)
+    with pytest.raises(llm.LLMBudgetExceeded):
+        client.chat(run_id, "critic", MSGS, budget=llm.Budget(4))
+    assert len(transport.requests) == 4
+    assert trace.read_run(run_id)[-1].summary_out == "stop: upstream attempt budget of 4 used up"
+
+
+def test_budget_is_shared_by_tool_rounds_and_repair(run_id):
+    mock = llm.MockLLM([TOOL_CALL, "not json", "never asked"])
+    with pytest.raises(llm.LLMBudgetExceeded):
+        mock.chat_json(run_id, "writer", MSGS, Draft, tools=[BRIEF_TOOL], run_tool=lambda n, a: "{}",
+                       budget=llm.Budget(2))
+    assert len(mock.calls) == 2
+
+
+def test_role_budgets_match_decision_4_4():
+    assert llm.ROLE_BUDGETS == {"planner": 12, "writer": 8, "critic": 4, "analyst": 12}
+
+
+TOOL_CALL = llm.LLMResponse(model="m", content=None, tool_calls=[
+    {"id": "c1", "type": "function", "function": {"name": "get_brand_brief", "arguments": "{}"}}])
+BRIEF_TOOL = {"type": "function", "function": {"name": "get_brand_brief", "parameters": {"type": "object"}}}
+
+
+def test_chat_json_runs_tools_then_validates(run_id):
+    ran: list[tuple[str, dict]] = []
+    mock = llm.MockLLM([TOOL_CALL, '{"post_id": "p1", "text": "Rye.", "attempt": 1}'])
+    out = mock.chat_json(run_id, "writer", MSGS, Draft, tools=[BRIEF_TOOL],
+                         run_tool=lambda n, a: ran.append((n, a)) or '{"name": "B"}')
+    assert out.text == "Rye." and ran == [("get_brand_brief", {})]
+    assert mock.calls[1][-2]["tool_calls"] and mock.calls[1][-1] == {
+        "role": "tool", "tool_call_id": "c1", "content": '{"name": "B"}'}
+
+
+def test_tool_rounds_are_capped_and_repair_goes_out_without_tools(run_id):
+    mock = llm.MockLLM([TOOL_CALL] * 3 + ['{"post_id": "p1", "text": "Rye.", "attempt": 1}'])
+    out = mock.chat_json(run_id, "writer", MSGS, Draft, tools=[BRIEF_TOOL], run_tool=lambda n, a: "{}")
+    assert out.text == "Rye." and len(mock.calls) == 1 + llm.MAX_TOOL_ROUNDS + 1
+    assert mock.tools_offered[-1] == []
+
+
+def test_overrides_replace_model_supplied_fields(run_id):
+    mock = llm.MockLLM(['{"post_id": "fake", "text": "Rye.", "attempt": 3}'])
+    out = mock.chat_json(run_id, "writer", MSGS, Draft, overrides={"post_id": "p9", "attempt": 1})
+    assert (out.post_id, out.attempt) == ("p9", 1)
+
+
+@pytest.mark.parametrize("raw, expected", [("{}", {}), ("", {}), ("not json", {}), ("[1]", {}),
+                                           ('{"limit": 3}', {"limit": 3}), ({"a": 1}, {"a": 1})])
+def test_tool_args_never_crash_the_loop(raw, expected):
+    assert llm._tool_args(raw) == expected

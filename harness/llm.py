@@ -64,6 +64,10 @@ class LLMUnavailable(LLMError):
     """Every model in the chain failed; the caller escalates instead of retrying forever."""
 
 
+class LLMBudgetExceeded(LLMUnavailable):
+    """The invocation used up its upstream-attempt budget (decision 4.4); handled like an unavailable chain."""
+
+
 class LLMOutputError(LLMError):
     """The answer was still invalid after the one repair attempt (architecture rule 4)."""
 
@@ -181,31 +185,70 @@ def _describe(response: LLMResponse) -> str:
             f"finish={response.finish_reason}: {out}")
 
 
+@dataclass
+class Budget:
+    """Upstream attempts left for one agent invocation (decision 4.4), shared by its tool rounds and its repair,
+    so one stubborn post cannot drain the free daily quota."""
+
+    limit: int
+    used: int = 0
+
+    def take(self) -> bool:
+        if self.used >= self.limit:
+            return False
+        self.used += 1
+        return True
+
+
+ROLE_BUDGETS: dict[str, int] = {"planner": 12, "writer": 8, "critic": 4, "analyst": 12}
+MAX_TOOL_ROUNDS = 2
+
+ToolRunner = Callable[[str, dict[str, Any]], str]
+
+
 class LLM(ABC):
-    """Shared by the real client and MockLLM, so agents and tests take the same code path for validation and repair."""
+    """Shared by the real client and MockLLM, so agents and tests take the same code path for tools, validation and repair."""
 
     @abstractmethod
     def chat(self, run_id: str, agent: Agent, messages: list[Message],
-             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> LLMResponse:
+             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS,
+             budget: Budget | None = None) -> LLMResponse:
         """Return the first good answer from the chain, or raise an LLMError."""
 
     def chat_json(self, run_id: str, agent: Agent, messages: list[Message], schema: type[T],
-                  *, max_tokens: int = DEFAULT_MAX_TOKENS) -> T:
-        """Validate the answer against `schema`; on failure, show the model its errors once, then give up (rule 4)."""
-        response = self.chat(run_id, agent, messages, max_tokens=max_tokens)
-        first = _validation_error(response, schema)
+                  *, tools: list[dict[str, Any]] | None = None, run_tool: ToolRunner | None = None,
+                  overrides: Mapping[str, Any] | None = None, budget: Budget | None = None,
+                  max_tokens: int = DEFAULT_MAX_TOKENS) -> T:
+        """Validate the answer against `schema`; on failure, show the model its errors once, then give up (rule 4).
+
+        `overrides` are the fields the harness owns (post_id, attempt, ...): they replace whatever the model sent
+        before validation, so a model can neither fake them nor fail validation for leaving them out.
+        """
+        messages = list(messages)
+        response = self.chat(run_id, agent, messages, tools, max_tokens=max_tokens, budget=budget)
+        rounds = 0
+        while response.tool_calls and tools and run_tool and rounds < MAX_TOOL_ROUNDS:
+            rounds += 1
+            messages.append({"role": "assistant", "content": response.content or "", "tool_calls": response.tool_calls})
+            for call in response.tool_calls:
+                fn = call.get("function") or {}
+                messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
+                                 "content": run_tool(str(fn.get("name")), _tool_args(fn.get("arguments")))})
+            response = self.chat(run_id, agent, messages, tools, max_tokens=max_tokens, budget=budget)
+        first = _validated(response, schema, overrides)
         if isinstance(first, BaseModel):
             return first
         error = first
         trace.log_event(run_id, agent, "decision", f"invalid {schema.__name__} from {response.model}",
                         f"repair attempt: {error}", ok=False, model=response.model)
+        # The repair goes out without tools, so the model has to answer in text this time.
         repair = [*messages,
                   {"role": "assistant", "content": response.content or ""},
                   {"role": "user", "content": (
                       f"Your reply was not a valid {schema.__name__} JSON object. Errors: {error}\n"
                       "Reply with only the corrected JSON object, no other text.")}]
-        repaired = self.chat(run_id, agent, repair, max_tokens=max_tokens)
-        result = _validation_error(repaired, schema)
+        repaired = self.chat(run_id, agent, repair, max_tokens=max_tokens, budget=budget)
+        result = _validated(repaired, schema, overrides)
         if isinstance(result, BaseModel):
             trace.log_event(run_id, agent, "decision", f"repair of {schema.__name__}", "repair succeeded",
                             ok=True, model=repaired.model)
@@ -215,12 +258,29 @@ class LLM(ABC):
         raise LLMOutputError(f"{agent}: invalid {schema.__name__} after one repair attempt: {result}")
 
 
-def _validation_error(response: LLMResponse, schema: type[T]) -> T | str:
+def _tool_args(raw: Any) -> dict[str, Any]:
+    """Bad arguments become an empty call that the tool can refuse, instead of a crash in the loop."""
+    if isinstance(raw, dict):
+        return raw
+    try:
+        parsed = json.loads(raw) if isinstance(raw, str) and raw.strip() else {}
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _validated(response: LLMResponse, schema: type[T], overrides: Mapping[str, Any] | None) -> T | str:
     """Return the validated model, or a short error string to show the model in the repair prompt."""
     if not response.content:
         return "the reply had no text content"
     try:
-        return schema.model_validate_json(extract_json(response.content))
+        data = json.loads(extract_json(response.content))
+    except json.JSONDecodeError as e:
+        return f"body: Invalid JSON: {e.msg}"
+    if not isinstance(data, dict):
+        return "body: expected a JSON object"
+    try:
+        return schema.model_validate({**data, **(overrides or {})})
     except ValidationError as e:
         return "; ".join(f"{'.'.join(map(str, err['loc'])) or 'body'}: {err['msg']}" for err in e.errors()[:5])
 
@@ -257,11 +317,16 @@ class OpenRouterLLM(LLM):
         return min(BACKOFF_CAP_S, BACKOFF_BASE_S * 2 ** (attempt - 1)) * (0.5 + self._jitter())
 
     def chat(self, run_id: str, agent: Agent, messages: list[Message],
-             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> LLMResponse:
+             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS,
+             budget: Budget | None = None) -> LLMResponse:
         summary_in = json.dumps({"messages": messages, "tools": [t["function"]["name"] for t in tools or []]},
                                 ensure_ascii=False)
         for index, model in enumerate(self.models):
             for attempt in range(1, self.max_tries + 1):
+                if budget is not None and not budget.take():
+                    trace.log_event(run_id, agent, "decision", f"{model}: attempt budget",
+                                    f"stop: upstream attempt budget of {budget.limit} used up", ok=False, model=model)
+                    raise LLMBudgetExceeded(f"{agent}: upstream attempt budget of {budget.limit} used up")
                 outcome = self._attempt(model, messages, tools, max_tokens)
                 if isinstance(outcome, LLMResponse):
                     trace.log_event(run_id, agent, "llm_call", summary_in, _describe(outcome), ok=True,
@@ -320,10 +385,15 @@ class MockLLM(LLM):
         self._script = list(script)
         self.model = model
         self.calls: list[list[Message]] = []
+        self.tools_offered: list[list[str]] = []
 
     def chat(self, run_id: str, agent: Agent, messages: list[Message],
-             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS) -> LLMResponse:
-        self.calls.append(messages)
+             tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS,
+             budget: Budget | None = None) -> LLMResponse:
+        if budget is not None and not budget.take():
+            raise LLMBudgetExceeded(f"{agent}: upstream attempt budget of {budget.limit} used up")
+        self.calls.append(list(messages))
+        self.tools_offered.append([t["function"]["name"] for t in tools or []])
         if not self._script:
             raise LLMUnavailable("MockLLM script exhausted")
         item = self._script.pop(0)
