@@ -39,7 +39,7 @@ MAX_TRIES_PER_MODEL = 3
 TIMEOUT_S = 120.0
 BACKOFF_BASE_S = 2.0
 BACKOFF_CAP_S = 30.0
-DEFAULT_MAX_TOKENS = 1024
+DEFAULT_MAX_TOKENS = 4096  # free models still cost $0; reasoning models used ~990 of 1,024 thinking (run_..._d8f068)
 
 FATAL_STATUSES = frozenset({401, 402, 403})
 _FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
@@ -155,14 +155,21 @@ def parse_completion(model: str, body: str, latency_ms: int) -> LLMResponse | _F
     message = choices[0].get("message") or {}
     content = message.get("content")
     tool_calls = message.get("tool_calls") or []
-    if not (isinstance(content, str) and content.strip()) and not tool_calls:
-        return _Failure("transient", "200 with an empty message")
+    finish = choices[0].get("finish_reason")
     usage = data.get("usage") or {}
+    # Kept on failures too: an empty or cut-off reply is only diagnosable with its finish reason and token counts.
+    stats = f"finish={finish} tokens in={usage.get('prompt_tokens')} out={usage.get('completion_tokens')}"
+    if finish == "length":
+        # A reasoning model can spend the whole budget thinking and stop mid-JSON. The same model with the
+        # same limit is likely to do it again, so this is a skip to the next model, not a retry.
+        return _Failure("skip", f"truncated at max_tokens ({stats})")
+    if not (isinstance(content, str) and content.strip()) and not tool_calls:
+        return _Failure("transient", f"200 with an empty message ({stats})")
     return LLMResponse(
         model=data.get("model") or model,
         content=content if isinstance(content, str) else None,
         tool_calls=list(tool_calls),
-        finish_reason=choices[0].get("finish_reason"),
+        finish_reason=finish,
         prompt_tokens=usage.get("prompt_tokens"),
         completion_tokens=usage.get("completion_tokens"),
         latency_ms=latency_ms,
@@ -218,7 +225,7 @@ class LLM(ABC):
     def chat_json(self, run_id: str, agent: Agent, messages: list[Message], schema: type[T],
                   *, tools: list[dict[str, Any]] | None = None, run_tool: ToolRunner | None = None,
                   overrides: Mapping[str, Any] | None = None, budget: Budget | None = None,
-                  max_tokens: int = DEFAULT_MAX_TOKENS) -> T:
+                  repair_hint: str = "", max_tokens: int = DEFAULT_MAX_TOKENS) -> T:
         """Validate the answer against `schema`; on failure, show the model its errors once, then give up (rule 4).
 
         `overrides` are the fields the harness owns (post_id, attempt, ...): they replace whatever the model sent
@@ -244,9 +251,7 @@ class LLM(ABC):
         # The repair goes out without tools, so the model has to answer in text this time.
         repair = [*messages,
                   {"role": "assistant", "content": response.content or ""},
-                  {"role": "user", "content": (
-                      f"Your reply was not a valid {schema.__name__} JSON object. Errors: {error}\n"
-                      "Reply with only the corrected JSON object, no other text.")}]
+                  {"role": "user", "content": repair_prompt(schema.__name__, error, repair_hint)}]
         repaired = self.chat(run_id, agent, repair, max_tokens=max_tokens, budget=budget)
         result = _validated(repaired, schema, overrides)
         if isinstance(result, BaseModel):
@@ -256,6 +261,15 @@ class LLM(ABC):
         trace.log_event(run_id, agent, "decision", f"repair of {schema.__name__}", f"repair failed: {result}",
                         ok=False, model=repaired.model)
         raise LLMOutputError(f"{agent}: invalid {schema.__name__} after one repair attempt: {result}")
+
+
+def repair_prompt(schema_name: str, error: str, hint: str = "") -> str:
+    """Short and explicit: the cut-off repair in run_..._d8f068 came from a model thinking at length before answering."""
+    return "\n".join(line for line in (
+        f"Your reply was not a valid {schema_name} JSON object. Errors: {error}",
+        hint,
+        "Do not explain or think aloud. Reply with only the corrected JSON object, no other text.",
+    ) if line)
 
 
 def _tool_args(raw: Any) -> dict[str, Any]:
@@ -282,7 +296,15 @@ def _validated(response: LLMResponse, schema: type[T], overrides: Mapping[str, A
     try:
         return schema.model_validate({**data, **(overrides or {})})
     except ValidationError as e:
-        return "; ".join(f"{'.'.join(map(str, err['loc'])) or 'body'}: {err['msg']}" for err in e.errors()[:5])
+        return "; ".join(_describe_error(err) for err in e.errors()[:5])
+
+
+def _describe_error(err: Mapping[str, Any]) -> str:
+    """"At most 300 characters" alone did not get a model under the limit; the actual length does."""
+    where = ".".join(map(str, err["loc"])) or "body"
+    if err.get("type") == "string_too_long" and isinstance(err.get("input"), str):
+        return f"{where}: is {len(err['input'])} characters; the limit is {err.get('ctx', {}).get('max_length')}"
+    return f"{where}: {err['msg']}"
 
 
 class OpenRouterLLM(LLM):

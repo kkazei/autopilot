@@ -110,9 +110,14 @@ def test_writer_cannot_set_post_id_or_attempt(run_id):
 
 
 def test_overlong_draft_goes_through_one_repair(run_id):
-    llm = MockLLM([draft("x" * 301), draft("short")])
+    llm = MockLLM([draft("x" * 348), draft("short")])
     assert writer.write(llm, run_id, PLANNED, BRIEF, attempt=1).text == "short"
-    assert "300" in llm.calls[1][-1]["content"]
+    repair = llm.calls[1][-1]["content"]
+    assert "is 348 characters; the limit is 300" in repair and "280 characters or fewer" in repair
+
+
+def test_writer_prompt_asks_for_280_characters_or_fewer():
+    assert "280 characters or fewer" in writer.system_prompt(BRIEF)
 
 
 def test_llm_failure_ends_the_loop_as_failed(run_id):

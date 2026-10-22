@@ -12,6 +12,9 @@ from harness.llm import LLM
 from harness.schemas import MAX_POST_CHARS, BrandBrief, Critique, Draft, PlannedPost
 
 ROLE = "writer"
+# Asked for below the hard cap: models overshoot (348 characters on the first live run), and Draft rejects 301+.
+TARGET_CHARS = 280
+REPAIR_HINT = f"Keep the text to {TARGET_CHARS} characters or fewer."
 
 
 def system_prompt(brief: BrandBrief) -> str:
@@ -21,7 +24,7 @@ Rules:
 - Sound {", ".join(brief.voice)}. Follow every item in the brief's "do" list.
 - Never do anything in the brief's "dont" list.
 - Never use any banned phrase, in any spelling or form: {"; ".join(brief.banned_phrases)}.
-- At most {MAX_POST_CHARS} characters. One idea. End with one clear, low-pressure next step that fits the goal.
+- {TARGET_CHARS} characters or fewer, counting the link (the hard limit is {MAX_POST_CHARS}). One idea. End with one clear, low-pressure next step that fits the goal.
 - Only state facts that are in the brief or the planned post.
 
 {DATA_NOTE}
@@ -51,4 +54,5 @@ def write(llm: LLM, run_id: str, planned: PlannedPost, brief: BrandBrief, attemp
     messages = [{"role": "system", "content": system_prompt(brief)},
                 {"role": "user", "content": user_prompt(planned, brief, feedback, previous)}]
     return llm.chat_json(run_id, ROLE, messages, Draft, tools=tools.specs(), run_tool=tools,
-                         overrides={"post_id": planned.id, "attempt": attempt}, budget=budget_for(ROLE))
+                         overrides={"post_id": planned.id, "attempt": attempt}, budget=budget_for(ROLE),
+                         repair_hint=REPAIR_HINT)

@@ -556,6 +556,54 @@ def test_overrides_replace_model_supplied_fields(run_id):
     assert (out.post_id, out.attempt) == ("p9", 1)
 
 
+CUT_OFF = json.dumps({"model": "a/one:free", "choices": [{"message": {"content": '{"text":"In Saturday\'s class, Small'},
+                                                         "finish_reason": "length"}],
+                      "usage": {"prompt_tokens": 1166, "completion_tokens": 1024}})
+
+
+def test_cut_off_reply_moves_to_next_model_and_is_never_validated(run_id):
+    """Regression for run_20261022_092011_d8f068: a reasoning model hit max_tokens mid-JSON."""
+    client, transport, sleeps = chain((200, CUT_OFF), (200, GOOD))
+    response = client.chat(run_id, "writer", MSGS)
+    assert response.content == "hello" and transport.models == ["a/one:free", "b/two:free"] and sleeps == []
+    failed = [e for e in trace.read_run(run_id) if e.kind == "llm_call" and not e.ok]
+    assert len(failed) == 1 and "truncated at max_tokens" in failed[0].summary_out
+
+
+def test_cut_off_repair_falls_back_instead_of_failing_the_draft(run_id):
+    bad = json.dumps({"choices": [{"message": {"content": '{"post_id": "p1", "attempt": 1}'}, "finish_reason": "stop"}]})
+    fixed = json.dumps({"choices": [{"message": {"content": '{"post_id": "p1", "text": "Rye.", "attempt": 1}'},
+                                     "finish_reason": "stop"}]})
+    client, transport, _ = chain((200, bad), (200, CUT_OFF), (200, fixed))
+    assert client.chat_json(run_id, "writer", MSGS, Draft).text == "Rye."
+    assert transport.models == ["a/one:free", "a/one:free", "b/two:free"]
+
+
+def test_failed_attempts_record_finish_reason_and_tokens(run_id):
+    empty = json.dumps({"choices": [{"message": {"content": ""}, "finish_reason": "stop"}],
+                        "usage": {"prompt_tokens": 974, "completion_tokens": 0}})
+    client, _, _ = chain((200, empty), (200, CUT_OFF), (200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    failed = [e.summary_out for e in trace.read_run(run_id) if e.kind == "llm_call" and not e.ok]
+    assert "finish=stop tokens in=974 out=0" in failed[0]
+    assert "finish=length tokens in=1166 out=1024" in failed[1]
+
+
+def test_default_request_allows_4096_tokens(run_id):
+    client, transport, _ = chain((200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    assert llm.DEFAULT_MAX_TOKENS == 4096 and transport.requests[0]["payload"]["max_tokens"] == 4096
+
+
+def test_repair_prompt_states_actual_length_target_and_no_thinking_aloud(run_id):
+    mock = llm.MockLLM([json.dumps({"post_id": "p1", "text": "x" * 348, "attempt": 1}),
+                        '{"post_id": "p1", "text": "Rye.", "attempt": 1}'])
+    mock.chat_json(run_id, "writer", MSGS, Draft, repair_hint="Keep the text to 280 characters or fewer.")
+    prompt = mock.calls[1][-1]["content"]
+    assert "text: is 348 characters; the limit is 300" in prompt
+    assert "280 characters or fewer" in prompt and "Do not explain or think aloud" in prompt
+
+
 @pytest.mark.parametrize("raw, expected", [("{}", {}), ("", {}), ("not json", {}), ("[1]", {}),
                                            ('{"limit": 3}', {"limit": 3}), ({"a": 1}, {"a": 1})])
 def test_tool_args_never_crash_the_loop(raw, expected):
