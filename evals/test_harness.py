@@ -1,4 +1,4 @@
-"""Harness core tests (D1-B): schemas, trace and guardrails. No network, temp data dirs only."""
+"""Harness core tests (D1-B, D1-C): schemas, trace, guardrails and the LLM chain. No network, temp data dirs only."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from harness import guardrails, trace
+from harness import guardrails, llm, trace
 from harness.schemas import (
     BrandBrief,
     Critique,
@@ -330,3 +330,179 @@ def test_run_all_reports_every_failure_and_skips_approval(run_id):
 def test_run_all_blocks_when_reviewer_declines(run_id):
     result = run_all(run_id, "Warm bread.", approval_enabled=True, input_fn=lambda _: "n")
     assert not result["ok"] and result["reasons"] == ["require_approval: human reviewer did not approve"]
+
+
+# ---------- LLM fallback chain ----------
+
+KEY = "sk-or-v1-" + "0" * 40
+CHAIN = ["a/one:free", "b/two:free", "c/three:free"]
+GOOD = json.dumps({"model": "a/one:free", "choices": [{"message": {"content": "hello"}, "finish_reason": "stop"}],
+                   "usage": {"prompt_tokens": 12, "completion_tokens": 3}})
+MSGS = [{"role": "user", "content": "hi"}]
+
+
+class ScriptedTransport:
+    """Plays back one outcome per request: a (status, body) pair or an exception to raise."""
+
+    def __init__(self, *outcomes):
+        self.outcomes = list(outcomes)
+        self.requests: list[dict] = []
+
+    def __call__(self, url, headers, body, timeout_s):
+        self.requests.append({"headers": dict(headers), "payload": json.loads(body)})
+        outcome = self.outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return llm.HttpResponse(*outcome)
+
+    @property
+    def models(self) -> list[str]:
+        return [r["payload"]["model"] for r in self.requests]
+
+
+def chain(*outcomes, models=CHAIN, max_tries=3) -> tuple[llm.OpenRouterLLM, ScriptedTransport, list[float]]:
+    transport, sleeps = ScriptedTransport(*outcomes), []
+    client = llm.OpenRouterLLM(models, KEY, transport=transport, sleep=sleeps.append, jitter=lambda: 0.5,
+                               max_tries=max_tries)
+    return client, transport, sleeps
+
+
+def test_models_from_env_parses_and_refuses_paid_ids():
+    assert llm.models_from_env({llm.MODELS_ENV: " a/one:free, b/two:free ,"}) == ["a/one:free", "b/two:free"]
+    with pytest.raises(llm.LLMConfigError, match="non-free"):
+        llm.models_from_env({llm.MODELS_ENV: "a/one:free,openai/gpt-5"})
+    with pytest.raises(llm.LLMConfigError, match="empty"):
+        llm.models_from_env({})
+
+
+def test_missing_key_is_refused_before_any_request(monkeypatch):
+    monkeypatch.delenv(llm.KEY_ENV, raising=False)
+    with pytest.raises(llm.LLMConfigError):
+        llm.OpenRouterLLM(CHAIN, transport=lambda *a: pytest.fail("request sent"))
+
+
+def test_first_model_success_records_model_latency_and_tokens(run_id):
+    client, transport, _ = chain((200, GOOD))
+    response = client.chat(run_id, "writer", MSGS)
+    assert response.content == "hello" and response.prompt_tokens == 12 and response.completion_tokens == 3
+    assert transport.models == ["a/one:free"] and transport.requests[0]["payload"]["stream"] is False
+    [event] = trace.read_run(run_id)
+    assert event.kind == "llm_call" and event.ok and event.model == "a/one:free" and event.latency_ms is not None
+    assert "tokens in=12 out=3" in event.summary_out
+
+
+def test_429_backs_off_then_retries_same_model(run_id):
+    client, transport, sleeps = chain((429, "busy"), (200, GOOD))
+    assert client.chat(run_id, "writer", MSGS).content == "hello"
+    assert transport.models == ["a/one:free", "a/one:free"] and sleeps == [2.0]
+    kinds = [(e.kind, e.ok) for e in trace.read_run(run_id)]
+    assert kinds == [("llm_call", False), ("decision", True), ("llm_call", True)]
+
+
+def test_backoff_is_exponential_jittered_and_capped():
+    client, _, _ = chain()
+    assert [client.backoff_s(n) for n in (1, 2, 3)] == [2.0, 4.0, 8.0]
+    client._jitter = lambda: 1.0
+    assert client.backoff_s(10) == llm.BACKOFF_CAP_S * 1.5
+
+
+def test_three_transient_failures_fall_back_to_next_model(run_id):
+    client, transport, sleeps = chain((429, ""), (503, ""), TimeoutError("slow"), (200, GOOD))
+    assert client.chat(run_id, "planner", MSGS).content == "hello"
+    assert transport.models == ["a/one:free"] * 3 + ["b/two:free"] and len(sleeps) == 2
+    decisions = [e.summary_out for e in trace.read_run(run_id) if e.kind == "decision"]
+    assert decisions[-1] == "fallback to b/two:free"
+
+
+def test_404_skips_to_next_model_without_retry(run_id):
+    client, transport, sleeps = chain((404, "no endpoint"), (200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    assert transport.models == ["a/one:free", "b/two:free"] and sleeps == []
+
+
+@pytest.mark.parametrize("status", [401, 402, 403])
+def test_auth_errors_stop_without_fallback(run_id, status):
+    client, transport, _ = chain((status, "nope"))
+    with pytest.raises(llm.LLMAuthError):
+        client.chat(run_id, "writer", MSGS)
+    assert transport.models == ["a/one:free"]
+    assert trace.read_run(run_id)[-1].summary_out == "stop: auth or billing error, no fallback"
+
+
+def test_error_inside_a_200_body_is_classified_by_its_code(run_id):
+    embedded = json.dumps({"error": {"code": 404, "message": "Provider returned error"}})
+    client, transport, sleeps = chain((200, embedded), (200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    assert transport.models == ["a/one:free", "b/two:free"] and sleeps == []
+
+
+def test_empty_answer_is_treated_as_transient(run_id):
+    empty = json.dumps({"choices": [{"message": {"content": ""}}]})
+    client, transport, _ = chain((200, empty), (200, GOOD))
+    assert client.chat(run_id, "writer", MSGS).content == "hello"
+    assert transport.models == ["a/one:free", "a/one:free"]
+
+
+def test_every_model_failing_raises_after_a_bounded_number_of_requests(run_id):
+    client, transport, _ = chain(*[(500, "")] * 6, max_tries=2)
+    with pytest.raises(llm.LLMUnavailable):
+        client.chat(run_id, "writer", MSGS)
+    assert len(transport.requests) == 6
+    assert trace.read_run(run_id)[-1].summary_out == "no models left"
+
+
+def test_tool_calls_are_returned_and_tools_sent(run_id):
+    body = json.dumps({"choices": [{"message": {"content": None, "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": "get_brand_brief", "arguments": "{}"}}]},
+        "finish_reason": "tool_calls"}]})
+    tool = {"type": "function", "function": {"name": "get_brand_brief", "parameters": {"type": "object"}}}
+    client, transport, _ = chain((200, body))
+    response = client.chat(run_id, "writer", MSGS, tools=[tool])
+    assert response.tool_calls[0]["function"]["name"] == "get_brand_brief"
+    assert transport.requests[0]["payload"]["tools"] == [tool]
+
+
+def test_key_is_sent_in_header_but_never_traced(run_id, monkeypatch):
+    monkeypatch.setenv(llm.KEY_ENV, KEY)
+    client, transport, _ = chain((401, f"bad key {KEY}"))
+    with pytest.raises(llm.LLMAuthError):
+        client.chat(run_id, "writer", MSGS)
+    assert transport.requests[0]["headers"]["Authorization"] == f"Bearer {KEY}"
+    assert KEY not in trace.run_path(run_id).read_text(encoding="utf-8")
+    assert KEY not in repr(client)
+
+
+@pytest.mark.parametrize("text", [
+    '{"post_id": "p1", "text": "Rye.", "attempt": 1}',
+    '```json\n{"post_id": "p1", "text": "Rye.", "attempt": 1}\n```',
+    'Here you go: {"post_id": "p1", "text": "Rye.", "attempt": 1} Enjoy!',
+])
+def test_chat_json_accepts_fenced_or_wrapped_json(run_id, text):
+    assert llm.MockLLM([text]).chat_json(run_id, "writer", MSGS, Draft).text == "Rye."
+
+
+def test_chat_json_repairs_once_and_shows_the_model_its_errors(run_id):
+    mock = llm.MockLLM(['{"post_id": "p1", "attempt": 1}', '{"post_id": "p1", "text": "Rye.", "attempt": 1}'])
+    assert mock.chat_json(run_id, "writer", MSGS, Draft).text == "Rye."
+    repair_prompt = mock.calls[1][-1]["content"]
+    assert "text" in repair_prompt and "Field required" in repair_prompt
+    outs = [e.summary_out for e in trace.read_run(run_id) if e.kind == "decision"]
+    assert outs[0].startswith("repair attempt") and outs[1] == "repair succeeded"
+
+
+def test_chat_json_fails_cleanly_after_one_repair(run_id):
+    mock = llm.MockLLM(["not json", "still not json", "never asked"])
+    with pytest.raises(llm.LLMOutputError):
+        mock.chat_json(run_id, "critic", MSGS, Critique)
+    assert len(mock.calls) == 2
+    last = trace.read_run(run_id)[-1]
+    assert last.kind == "decision" and not last.ok and last.summary_out.startswith("repair failed")
+
+
+def test_mock_llm_logs_like_the_real_chain_and_raises_when_exhausted(run_id):
+    mock = llm.MockLLM(["ok"])
+    mock.chat(run_id, "analyst", MSGS)
+    with pytest.raises(llm.LLMUnavailable):
+        mock.chat(run_id, "analyst", MSGS)
+    [event] = trace.read_run(run_id)
+    assert event.kind == "llm_call" and event.model == "mock/model:free"

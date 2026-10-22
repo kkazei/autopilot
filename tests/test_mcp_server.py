@@ -70,10 +70,42 @@ def test_publish_rejects_bad_post_id(env, post_id):
         server.publish_post("hi", post_id)
 
 
-def test_publish_live_is_not_available_yet(env, monkeypatch):
+def test_publish_live_without_credentials_fails_cleanly(env, monkeypatch):
     monkeypatch.delenv(server.DRY_RUN_ENV)
-    with pytest.raises(bluesky.BlueskyNotAvailable):
+    monkeypatch.delenv(bluesky.HANDLE_ENV, raising=False)
+    monkeypatch.delenv(bluesky.PASSWORD_ENV, raising=False)
+    monkeypatch.setattr(bluesky, "_client", None)
+    with pytest.raises(bluesky.BlueskyAuthError):
         server.publish_post("hi", "p1")
+
+
+def test_live_publish_logs_pending_record_before_calling_bluesky(env, monkeypatch):
+    """Audit finding 12: if the post goes out and anything fails after, the log must already show the attempt."""
+    monkeypatch.delenv(server.DRY_RUN_ENV)
+
+    def fake_post(text):
+        [pending] = call_log(env)
+        assert pending["tool"] == "publish_post" and pending["phase"] == "pending" and "hi" in pending["args"]
+        return {"uri": "at://did:plc:x/app.bsky.feed.post/1", "cid": "c1"}
+
+    monkeypatch.setattr(bluesky, "post", fake_post)
+    assert server.publish_post("hi", "p1")["uri"].startswith("at://")
+    pending, final = call_log(env)
+    assert final["ok"] is True and "phase" not in final
+    assert pending["receipt"] == final["receipt"] and pending["receipt"]
+
+
+def test_failed_live_publish_keeps_pending_record(env, monkeypatch):
+    monkeypatch.delenv(server.DRY_RUN_ENV)
+
+    def boom(text):
+        raise bluesky.BlueskyError("connection dropped after send")
+
+    monkeypatch.setattr(bluesky, "post", boom)
+    with pytest.raises(bluesky.BlueskyError):
+        server.publish_post("hi", "p1")
+    pending, final = call_log(env)
+    assert pending["phase"] == "pending" and final["ok"] is False and "connection dropped" in final["result"]
 
 
 @pytest.mark.parametrize("role, token", [("writer", ""), ("harness", "short")])

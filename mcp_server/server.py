@@ -19,6 +19,7 @@ Run over stdio from the repo root (Hermes or any MCP client launches it the same
 
 from __future__ import annotations
 
+import contextvars
 import functools
 import json
 import os
@@ -48,6 +49,7 @@ MIN_TOKEN_CHARS = 32
 MAX_LEARNINGS = 50
 _LOG_FIELD_MAX = 500
 POST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_receipt: contextvars.ContextVar[str] = contextvars.ContextVar("receipt", default="")
 
 ROLE_TOOLS: dict[str, tuple[str, ...]] = {
     "planner": ("get_brand_brief", "get_learnings"),
@@ -86,6 +88,7 @@ def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
             "pid": os.getpid(),
         }
         started = time.perf_counter()
+        token = _receipt.set(record["receipt"])
         try:
             result = fn(*args, **kwargs)
         except Exception as e:
@@ -95,10 +98,25 @@ def _logged(fn: Callable[..., Any]) -> Callable[..., Any]:
             record.update(ok=True, result=_short(result))
             return result
         finally:
+            _receipt.reset(token)
             record["latency_ms"] = int((time.perf_counter() - started) * 1000)
             append_jsonl(call_log_path(), record)
 
     return wrapper
+
+
+def _log_pending_publish(post_id: str, text: str) -> None:
+    """Record intent before the live post (audit finding 12): if anything fails after Bluesky accepts the post,
+    a pending record with no matching result still shows a post may be live, instead of nothing at all."""
+    append_jsonl(call_log_path(), {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "role": os.environ.get(ROLE_ENV, ""),
+        "tool": "publish_post",
+        "phase": "pending",
+        "args": _short({"text": text, "post_id": post_id}),
+        "receipt": _receipt.get(),
+        "pid": os.getpid(),
+    })
 
 
 def _require_harness() -> None:
@@ -136,6 +154,7 @@ def publish_post(text: str, post_id: str) -> dict[str, str]:
     if os.environ.get(DRY_RUN_ENV) == "1":
         suffix = secrets.token_hex(6)
         return {"uri": f"dryrun://{post_id}/{suffix}", "cid": f"dryrun-{suffix}", "posted_at": _now()}
+    _log_pending_publish(post_id, text)
     posted = bluesky.post(text)
     return {"uri": posted["uri"], "cid": posted["cid"], "posted_at": _now()}
 
