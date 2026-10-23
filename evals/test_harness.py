@@ -388,6 +388,21 @@ def chain(*outcomes, models=CHAIN, max_tries=3) -> tuple[llm.OpenRouterLLM, Scri
     return client, transport, sleeps
 
 
+def test_temperature_is_not_sent_unless_the_client_sets_it(run_id):
+    client, transport, _ = chain((200, GOOD))
+    client.chat(run_id, "critic", MSGS)
+    assert "temperature" not in transport.requests[0]["payload"]
+
+
+def test_a_client_temperature_of_zero_is_sent_on_every_attempt_including_fallbacks(run_id):
+    transport = ScriptedTransport((429, "busy"), (200, GOOD))
+    client = llm.OpenRouterLLM(CHAIN, KEY, transport=transport, sleep=lambda s: None, jitter=lambda: 0.5,
+                               temperature=0.0)
+    client.chat(run_id, "critic", MSGS)
+    assert len(transport.requests) == 2
+    assert all(r["payload"]["temperature"] == 0.0 for r in transport.requests)  # 0 is sent, not treated as "unset"
+
+
 def test_models_from_env_parses_and_refuses_paid_ids():
     assert llm.models_from_env({llm.MODELS_ENV: " a/one:free, b/two:free ,"}) == ["a/one:free", "b/two:free"]
     with pytest.raises(llm.LLMConfigError, match="non-free"):
