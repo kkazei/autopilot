@@ -1,4 +1,4 @@
-# Autopilot handoff, updated 2026-10-22 end of day (Day 1 of 3 complete)
+# Autopilot handoff, updated 2026-10-23 mid-day (Day 1 complete, Day 2 in progress)
 
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
@@ -13,13 +13,26 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **`docs/ISSUES_LOG.md`, local only, not in git:** what went wrong and how it was resolved (for the interview). It is excluded through `.git/info/exclude`, so it stays on the user's disk only. Keep it current. References below say "local ISSUES_LOG".
 
 ## 2. Where we are (one-screen summary)
-- **Status: Day 1 complete, first live post published.**
-- **Day:** Day 2 starts Fri Oct 23. The schedule runs Oct 22-24.
-- **First live post:** `run_20261022_092913_bde119`, `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a` (09:29 UTC). Writer and critic on minimax, passed on attempt 1, every guardrail passed, a human approved, 2 OpenRouter requests. Verified on the account's PDS. Record in `data/approved.jsonl`.
-- **Built today:** P1 harness core, `harness/llm.py` (fallback chain, backoff, budgets, repair, truncation handling), the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py` and `scripts/run_post.py`.
-- **Tests:** 253 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (229 before Day 2).
-- **Day 2 progress:** (a) link facets done, live-verified (`3935a10`); (b) critic fact-check done offline (`3d96fe7`, committed, not pushed). Next: (e) start live posts early, and (f) the outer loop.
-- **Known gaps remaining:** whether a real free model obeys the new fact-check rule is unproven until D2-B calibration; the trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31); the 50 requests/day limit is unconfirmed for this account (issue 18; decided to stay at $0). See the Day 2 checklist in section 5.
+- **Status: Day 1 complete; Day 2 in progress. The outer loop (f) is built and committed but has never run against a real model.**
+- **Day:** Day 2 is Fri Oct 23. The schedule runs Oct 22-24.
+- **Live posts so far (2):**
+  - `run_20261022_092913_bde119` (Oct 22, 09:29 UTC), `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a`.
+  - `run_20261023_071243_174bcb` (Oct 23, 07:13 UTC), a second Saturday-sourdough post.
+  - Both were human-approved. Records are in `data/approved.jsonl`.
+- **Three runs on Oct 23 ended without a post** (traces committed as evidence): `d77bec` (placeholder topic; the writer's draft was 312 characters and the repair failed), `ee5488` (the approval prompt had no stdin because the run used the `!` prefix; the draft had also drifted off the topic), `c48e24` (8-attempt writer budget used up; minimax `:free` retired, poolside and gemma 429, cohere truncated).
+- **Built:** P1 harness core, `harness/llm.py`, the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py`, `scripts/run_post.py`, and (Day 2) link facets, the critic fact-check, topic-fit rules, dead-model skip, and the whole outer loop: `harness/measure.py`, `agents/analyst.py`, `agents/planner.py`, `harness/plan_state.py`, `harness/quota.py`, `loops/outer.py`, `scripts/run_outer.py`.
+- **Tests:** 343 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (253 at the start of today).
+- **Day 2 progress:** (a) link facets (`3935a10`); (b) critic fact-check (`3d96fe7`); (c) banned variants and (d) quota decision done earlier; topic drift fixed offline (`ffe39e1`); dead-model skip (`fc3abf0`); (f) outer loop committed in four chunks (`c26f11f`, `5b60760`, `975da5f`, `fa24b3e`) plus data (`d03dc07`). Still open: (e) more live posts, then D2-B, D2-C, D2-D, P2.
+- **Model chain (`.env`, changed today):** `poolside/laguna-s-2.1:free, recursive/flint-v1.0:free, google/gemma-4-31b-it:free, cohere/north-mini-code:free`. See decision 4.9 for why.
+- **Quota:** the repo's own count was 34 of 50 requests in the last 24 hours at about 08:50 UTC on Oct 23 (`quota.run_cap` counts failed attempts too, so it likely overstates). Do at most one more live post today.
+- **Known gaps remaining:**
+  - Whether a real free model obeys the fact-check and topic-fit rules (critic) and the topic rule (writer) is unproven until a live run or D2-B calibration.
+  - The outer loop has only run against `MockLLM`; its first real run will also be the first real planner and analyst call.
+  - The trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31).
+  - The 50 requests/day limit is unconfirmed for this account (issue 18; decided to stay at $0).
+  - An unattended cron can never publish while approval is mandatory (decision 4.7 must be revisited for D2-D).
+  - `run_post` still enforces "no `--no-approve` without `--dry-run`" only in its CLI; `run_outer` now enforces it inside `run_outer()` too.
+- See the Day 2 checklist in section 5.
 
 ## 3. Git state
 | Commit | What | Pushed |
@@ -34,10 +47,19 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `e48066d` | fix: harden publish path, banned-phrase matching and loop failure handling after independent review (R1-R10) | yes |
 | `3935a10` | feat: link facets with UTF-8 byte offsets and hardened URL boundary detection (Day 2 item (a)) | yes |
 | `3d96fe7` | feat: critic checks claims against the brief and planned post (Day 2 item (b)) | no |
+| `c70e643` | docs: record decision to stay at $0 free tier | no |
+| `ffe39e1` | fix: keep drafts on the planned topic (writer `TOPIC_RULE`, critic `TOPIC_FIT`) | no |
+| `fc3abf0` | fix: skip a model that returns 404 for the rest of the run | no |
+| `c26f11f` | feat: run-wide request budget, long-lived lock option and tool results as data | no |
+| `5b60760` | feat: measure published posts and save a learning for each | no |
+| `975da5f` | feat: weekly planner, plan state and daily request guard | no |
+| `fa24b3e` | feat: outer loop and run_outer script | no |
+| `d03dc07` | data: today's live post and run traces | no |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
 - **Untracked on purpose:** `data/runs/run_20261022_080056_bb7b95.json`, a P1 sample dry-run trace with no LLM calls. Keep it out of git so it never shows on the dashboard.
+- **Scratch work from today lives outside the repo:** the model probe script and its traces are in the session scratchpad, not in `data/`.
 - **Git-ignored:** `.env`, `.venv/`, `.venv311/`, `data/runtime/` (the MCP call log), `.hermes_spike/`, `vendor/hermes-agent/`.
 
 ## 4. User decisions (settled: do not re-ask)
@@ -56,7 +78,12 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 6. **Committing:** commit only when the user says so and only what they name. The user decides what goes in git.
 7. **Approval flag (D1-D):** `scripts/run_post.py` takes `--approve/--no-approve`, default on. `--no-approve` is refused unless `--dry-run` is also set, so no live post goes out without a human. This must be revisited deliberately for the Day 2 cron (D2-D), and not loosened before then.
 8. **Writer brief (D1-D):** the brief goes in the writer prompt, and `get_brand_brief` is also offered through the allowlist-checked dispatcher in `agents/base.py` (Option A). Per-call upstream-attempt budgets stay on in `llm.py`.
-9. **Model chain:** `OPENROUTER_MODELS` = minimax, poolside, cohere, gemma (all `:free`). nemotron (404) and inkling (403) were dropped after probing.
+9. **Model chain (changed Oct 23):** `OPENROUTER_MODELS` = poolside, flint, gemma-4-31b, cohere (all `:free`), in that order (cohere last because it truncates at 4,096 tokens).
+   - **minimax `:free` is retired** (HTTP 404, "free launch period ended Oct 22"); it was removed from the chain and is gone from OpenRouter's list.
+   - **Probed Oct 23 with one tool call each:** `recursive/flint-v1.0:free` OK on the first turn only (a full draft and critique are unproven); `nvidia/nemotron-3-super-120b-a12b:free` 404 (NVIDIA backend not found, like the earlier nemotron drop); `google/gemma-4-26b-a4b-it:free` and `xingchen-agi/xing4.0-29b-a4b:free` 429 (not tested further; gemma-26b shares Google's pool with gemma-31b).
+   - **poolside's `laguna` ids carry an expiry of 2026-10-31.** Replace it before the cron runs past that date.
+   - nemotron (404) and inkling (403) were dropped earlier, on Day 1.
+   - `harness/llm.py` now skips a model that returned 404 for the rest of that client's life (one run), at the cost of one wasted slot per dead model per run until its id is removed.
 10. **Truncation fix:** `max_tokens` 4,096; `finish_reason=length` moves to the next model; OpenRouter's `reasoning` setting deliberately not used.
 
 ## 5. Task list
@@ -81,8 +108,12 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - **Limits:** offline tests cannot show a free model obeys the rule (D2-B calibration or a live probe decides that; the live probe was skipped on purpose to save quota); the cap only blocks at `--min-score` 4 or 5; over-flagging of harmless generic detail is unmeasured (count revisions per post in D2-B).
 - [x] **(c) `check_banned` variants** (issue 17): done early, as review item 27 (inflections, spaced/dotted letters, no-space forms, `banned_variants` in the brief).
 - [x] **(d) Quota decision** (issue 18): **decided Oct 23: stay at $0** (the user's goal is a free build to demo AI engineering). Ration the 50 requests/day: spread calibration over Day 2 and 3; buying credits is only a fallback if the user chooses it later. The 50/day limit is assumed from OpenRouter's docs and not yet confirmed for this account (a read-only check needs the user's approval).
-- [ ] **(e) Start posting early** with `scripts/run_post.py` (live, approval on) to build real engagement data. The 60-minute gap means 3-5 posts take 3+ hours of wall time.
-- [ ] **(f) D2-A:** metrics, analyst, learnings, planner, outer loop (and issue 16, read-after-post).
+- [~] **(e) Start posting early** with `scripts/run_post.py` (live, approval on) to build real engagement data. The 60-minute gap means 3-5 posts take 3+ hours of wall time. **2 live posts so far** (Oct 22 and Oct 23 07:13 UTC). Run it in a real terminal, never with the `!` prefix (no stdin, so approval is blocked): `.venv311/Scripts/python.exe -m scripts.run_post --topic "<a real, specific topic>" --goal click`. Never run it with a placeholder topic: "your topic here" was posted to the writer as the real topic once.
+- [~] **(f) D2-A:** metrics, analyst, learnings, planner, outer loop (and issue 16, read-after-post). **Code complete and committed offline (343 tests); never run against a real model.**
+  - `--dry-run` still makes real planner and writer calls, so it costs quota.
+  - **Review of this code (Oct 23):** no architecture-rule violations. Two findings fixed with tests and mutation checks: the planner now cites only learnings with signal (while every learning is "not enough data" no citation is required), and `run_outer()` itself refuses approval-off for a live run.
+  - **Design note:** with approval mandatory, an unattended run writes a draft nobody can approve, so the post is carried forward and the requests are wasted (D2-D, decision 4.7).
+  - The first real outer run is also the first real planner and analyst call; expect to find prompt problems.
 - [ ] **(g) D2-B, D2-C, D2-D:** critic calibration, failure tests, deploy.
 - **Note:** the approval flag (decision 4.7) must be revisited deliberately for the cron in D2-D, not loosened before then.
 
@@ -139,11 +170,11 @@ Goal: one approved post live on Bluesky, full trace saved, harness tests passing
 Goal: the cron runs unattended, and the second run's plan reflects the first run's learning.
 
 **Block 1: outer loop (D2-A)**
-- [ ] `get_metrics` against real Bluesky (the server tool and live client exist; handle issue 16, read-after-post)
-- [ ] `agents/analyst.py` ("not enough data" on zero or low engagement)
-- [ ] `agents/planner.py` (reads learnings, cites one, harness checks and retries once)
-- [ ] `loops/outer.py` (plan, inner loop, guardrails, publish, measure, learn; `--measure-only`; run summary). **Apply decision 4.3: only today's publishable posts.**
-- [ ] 3-5 more real posts (with the 60-minute gap this takes about 3+ hours of wall time; start early)
+- [~] `get_metrics` against real Bluesky: harness-side `fetch_metrics`, `measure.py` and not-found strikes (issue 16) are built and tested with a fake client; not read live yet
+- [~] `agents/analyst.py` ("not enough data" on zero or low engagement): done offline
+- [~] `agents/planner.py` (reads learnings, cites one that has signal, harness checks and retries once): done offline
+- [~] `loops/outer.py` (plan, inner loop, guardrails, publish, measure, learn; `--measure-only`; run summary; decision 4.3 applied): done offline
+- [ ] 3-5 more real posts (2 done; with the 60-minute gap this takes about 3+ hours of wall time)
 
 **Block 2: prove the critic (D2-B)**
 - [ ] About 10 drafts, including bad ones, hand-scored; `evals/calibrate_critic.py`; `data/calibration/report.md`; one rubric fix with before and after numbers
@@ -202,6 +233,10 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 19 | URL in posts is plain text (no link facets); confirmed on the first live post | **Fixed** (`3935a10`), live-verified; local ISSUES_LOG 4.2 (not in git) still says Open |
 | 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | **Fixed offline** (`3d96fe7`); real-model behavior unproven until D2-B; local ISSUES_LOG 7.4 (not in git) still says Open |
 | 31 | `trace.py` keeps only the first 2,000 characters of each call summary (`SUMMARY_MAX_CHARS`), and the critic's messages run past 3,000, so the critic's trace events never show the draft or the planned post (confirmed in a dry run). Suggested fix: head-and-tail truncation in `harness/trace.py`, with its own tests | Open, schedule before D3-A (trace view) |
+| 32 | Writer and critic let a draft drift off the planned topic: the writer prompt never said the topic outranks the brief's class emphasis, and the critic never checked topic fit (`ee5488`: a free-sample-loaf topic became a bulk-fermentation draft scoring all 5s) | **Fixed offline** (`ffe39e1`: writer `TOPIC_RULE`, critic `TOPIC_FIT` caps clarity at 2); real-model behavior unproven |
+| 33 | A retired model (minimax `:free`, 404 from Oct 22) cost one upstream attempt on every `chat()` call, two of the writer's eight in `c48e24` | **Fixed** (`fc3abf0`: a 404'd model is skipped for the rest of the run); still remove dead ids from `OPENROUTER_MODELS` |
+| 34 | Free model pool is thin and unstable: poolside, gemma and xingchen 429 at times, cohere truncates, nemotron 404, poolside expires Oct 31 | Open: chain reordered Oct 23 (decision 4.9); flint added but proven for one tool call only; re-probe xingchen later |
+| 35 | `run_post` enforces "approval off only for a dry run" in its CLI only (`run_outer` enforces it inside `run_outer()` too) | Open, low |
 
 **Independent review of `feat/hermes-runtime` (Oct 22, end of Day 1).** Each item was reproduced with a failing offline test before it was fixed. Items 21-24 were also mutation-checked (each fix reverted makes a test fail). Committed in `e48066d`.
 
@@ -320,5 +355,10 @@ Kept from the original handoff. Build this only after the first live post, withi
 - Do not redo or re-ask settled decisions (section 4). Do not invent MCP tools or rename the PDF's files without a reason.
 - Follow CLAUDE.md's definition of done: tests pass, no secrets in the diff, trace verified by running once, and a 3-line summary.
 - **Never add attribution trailers to commits or PRs.**
-- **Next action:** Day 2 item (e), start live posts early (the user must be present: approval stays on), with (f), the outer loop, in parallel. State a plan and wait for the user's go. Item (d) is decided: stay at $0 and ration requests.
+- **Next action (Oct 23):**
+  1. Wait for the free models' 429s to clear, then make **one** live post in a real terminal with a specific topic (the free-sample-loaf topic is a known drift case and tests the new writer and critic rules). The user must be present: approval stays on. Check the trace for which model wrote and scored it.
+  2. Fix issue 31 (trace truncation) so the critic's scores show in the trace.
+  3. First real `run_outer` (try `--measure-only` first, since it is cheapest), then D2-B calibration, D2-C, D2-D.
+  4. Item (d) stays decided: stay at $0 and ration requests (the repo counted 34 of 50 by about 08:50 UTC on Oct 23).
+- **Local ISSUES_LOG (not in git) is behind:** it still says issues 19 and 20 are Open and has no entry for issues 32-35.
 - **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
