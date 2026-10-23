@@ -1,0 +1,46 @@
+[
+  {
+    "ts": "2026-10-23T12:09:00.647129Z",
+    "run_id": "run_20261023_120900_66f24c",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_outer",
+    "summary_out": "start: dry_run=False approval=True measure_only=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T12:09:00.651002Z",
+    "run_id": "run_20261023_120900_66f24c",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "daily guard",
+    "summary_out": "43 model requests in the last 24 hours; this run may make 7",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T12:09:00.652436Z",
+    "run_id": "run_20261023_120900_66f24c",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "measure candidates",
+    "summary_out": "0 to measure; none skipped",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T12:09:00.653644Z",
+    "run_id": "run_20261023_120900_66f24c",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_summary sha256=740cc79285462790262b2cb222355f9f9637d11cf6cdaed3a50898ce52f972e2",
+    "summary_out": "{\"schema_version\": 1, \"run_id\": \"run_20261023_120900_66f24c\", \"exit_code\": 0, \"dry_run\": false, \"requests\": {\"used\": 0, \"limit\": 7}, \"requests_last_24h_before_run\": 43, \"plan\": null, \"outcomes\": [{\"post_id\": null, \"status\": \"skipped\", \"reason\": \"measure only\"}], \"learnings\": {\"saved\": [], \"skipped\": []}, \"warnings\": []}",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  }
+]
