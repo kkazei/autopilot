@@ -17,9 +17,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **Day:** Day 2 starts Fri Oct 23. The schedule runs Oct 22-24.
 - **First live post:** `run_20261022_092913_bde119`, `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a` (09:29 UTC). Writer and critic on minimax, passed on attempt 1, every guardrail passed, a human approved, 2 OpenRouter requests. Verified on the account's PDS. Record in `data/approved.jsonl`.
 - **Built today:** P1 harness core, `harness/llm.py` (fallback chain, backoff, budgets, repair, truncation handling), the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py` and `scripts/run_post.py`.
-- **Tests:** 248 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (229 before Day 2 item (a)).
-- **Day 2 progress:** item (a), link facets, is done, live-verified and committed (`3935a10`). Next is (b), the critic fix.
-- **Known gaps remaining:** the critic passed a claim not in the brief (local ISSUES_LOG 7.4); the quota decision (issue 18). See the Day 2 start checklist in section 5.
+- **Tests:** 253 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (229 before Day 2).
+- **Day 2 progress:** (a) link facets done, live-verified (`3935a10`); (b) critic fact-check done offline (`3d96fe7`, committed, not pushed). Next: (e) start live posts early, and (f) the outer loop.
+- **Known gaps remaining:** whether a real free model obeys the new fact-check rule is unproven until D2-B calibration; the trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31); the quota decision (issue 18). See the Day 2 checklist in section 5.
 
 ## 3. Git state
 | Commit | What | Pushed |
@@ -33,6 +33,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | (end of Day 1) | docs+data: first live post, traces and handoff (this file, `approved.jsonl`, the live and failed run traces) | yes |
 | `e48066d` | fix: harden publish path, banned-phrase matching and loop failure handling after independent review (R1-R10) | yes |
 | `3935a10` | feat: link facets with UTF-8 byte offsets and hardened URL boundary detection (Day 2 item (a)) | yes |
+| `3d96fe7` | feat: critic checks claims against the brief and planned post (Day 2 item (b)) | no |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
@@ -74,9 +75,12 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - **Accepted trade-offs:** a URL with a non-ASCII path (like `/café`) is not linked at all, rather than linked half-way; bare domains without `http(s)://` are not linked.
   - **Live check passed** (Oct 22): one test post through `bluesky.post()`. The PDS record had exactly one `#link` facet at bytes 37-67 slicing to the URL, offsets differing from the character index (33), and the AppView showed the facet. The post was deleted and confirmed `RecordNotFound`. It bypassed the harness, so it is not in `approved.jsonl` and does not count toward the rate cap.
   - The dry run could not exercise the facet code (dry runs never reach `bluesky.post`), and `--dry-run` still calls OpenRouter, so it was run in-process with a scripted LLM.
-- [ ] **(b) Critic fix** (local ISSUES_LOG 7.4, not in git): give the critic the planned post (topic and angle), and a rule that any factual claim not in the brief or the planned post caps `policy_risk` at 3.
+- [x] **(b) Critic fix** (local ISSUES_LOG 7.4, not in git), committed as `3d96fe7`.
+  - `agents/critic.py`: the critic gets the same `planned_post` data block as the writer (goal inside it), a `FACT_CHECK` rule in the system prompt and a matching rubric line. A factual claim (sensory and craft detail included) not in the brief or the planned post caps `policy_risk` at 3, and the reason must quote the claim. `loops/inner.py`, the writer and the harness are unchanged; `passed` is still computed by the harness (rule 5).
+  - 5 tests added to `tests/test_inner_loop.py`; 253 pass on both interpreters; 7 mutation checks all killed; an in-process dry run replayed the yogurt draft (attempt 1 flagged, attempt 2 passed).
+  - **Limits:** offline tests cannot show a free model obeys the rule (D2-B calibration or a live probe decides that; the live probe was skipped on purpose to save quota); the cap only blocks at `--min-score` 4 or 5; over-flagging of harmless generic detail is unmeasured (count revisions per post in D2-B).
 - [x] **(c) `check_banned` variants** (issue 17): done early, as review item 27 (inflections, spaced/dotted letters, no-space forms, `banned_variants` in the brief).
-- [ ] **(d) Decide the quota question** (issue 18): stay at 50 requests/day on $0, or not.
+- [ ] **(d) Decide the quota question** (issue 18): stay at 50 requests/day on $0, or not. Recommended plan: stay at $0 and ration (spread calibration over Day 2 and 3; buying credits is only a fallback). The 50/day limit is assumed from OpenRouter's docs and not yet confirmed for this account (a read-only check needs the user's approval).
 - [ ] **(e) Start posting early** with `scripts/run_post.py` (live, approval on) to build real engagement data. The 60-minute gap means 3-5 posts take 3+ hours of wall time.
 - [ ] **(f) D2-A:** metrics, analyst, learnings, planner, outer loop (and issue 16, read-after-post).
 - [ ] **(g) D2-B, D2-C, D2-D:** critic calibration, failure tests, deploy.
@@ -196,7 +200,8 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | **Fixed** by review item 27 (committed in `e48066d`) |
 | 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36. Decide before Day 2 | Open, decide before Day 2 |
 | 19 | URL in posts is plain text (no link facets); confirmed on the first live post | **Fixed** (`3935a10`), live-verified; local ISSUES_LOG 4.2 (not in git) still says Open |
-| 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | Open, Day 2 checklist (b); local ISSUES_LOG 7.4 (not in git) |
+| 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | **Fixed offline** (`3d96fe7`); real-model behavior unproven until D2-B; local ISSUES_LOG 7.4 (not in git) still says Open |
+| 31 | `trace.py` keeps only the first 2,000 characters of each call summary (`SUMMARY_MAX_CHARS`), and the critic's messages run past 3,000, so the critic's trace events never show the draft or the planned post (confirmed in a dry run). Suggested fix: head-and-tail truncation in `harness/trace.py`, with its own tests | Open, schedule before D3-A (trace view) |
 
 **Independent review of `feat/hermes-runtime` (Oct 22, end of Day 1).** Each item was reproduced with a failing offline test before it was fixed. Items 21-24 were also mutation-checked (each fix reverted makes a test fail). Committed in `e48066d`.
 
@@ -315,5 +320,5 @@ Kept from the original handoff. Build this only after the first live post, withi
 - Do not redo or re-ask settled decisions (section 4). Do not invent MCP tools or rename the PDF's files without a reason.
 - Follow CLAUDE.md's definition of done: tests pass, no secrets in the diff, trace verified by running once, and a 3-line summary.
 - **Never add attribution trailers to commits or PRs.**
-- **Next action:** Day 2 item (b), the critic fix (planned for Fri Oct 23). State a plan and wait for the user's go. Item (d), the quota decision, is the user's and should come before live posting starts.
+- **Next action:** Day 2 item (e), start live posts early (the user must be present: approval stays on), with (f), the outer loop, in parallel. State a plan and wait for the user's go. Item (d), the quota decision, is the user's and should come before live posting starts.
 - **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
