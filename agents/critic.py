@@ -17,7 +17,11 @@ RUBRIC = f"""Score each dimension from 1 to 5 and give a one-sentence reason for
 voice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the "dont" list.
 clarity: 5 = one idea, readable in 5 seconds, under {MAX_POST_CHARS} characters. 1 = vague, cluttered, or two messages at once.
 cta: 5 = one specific next step that fits the post's goal. 1 = no action, or pushy and misleading.
-policy_risk (5 = safest): 5 = no banned phrase, no unverifiable claim, nothing sensitive. 1 = makes claims the business cannot back up."""
+policy_risk (5 = safest): 5 = no banned phrase, every factual claim is in the brief or the planned post, nothing sensitive. 3 = a claim that is not in the brief or the planned post. 1 = makes claims the business cannot back up."""
+
+# The first live post invented "the starter smells like yogurt" and scored all 5s (ISSUES_LOG 7.4): the
+# critic could not see the plan, and the brief's "do" list made the invented detail look like good voice.
+FACT_CHECK = """Fact check: compare every factual claim in the draft with the brand_brief and planned_post data. A factual claim is anything about the product, process, ingredients, sensory properties (how something smells, tastes, looks or feels), results, prices, times, people, awards or comparisons. Any such claim that is not in the brief or the planned post means policy_risk of 3 or lower, and the policy_risk reason must quote the unsupported claim word for word. Sensory and craft details are factual claims too: the brief's "do" list asks for concrete detail, but that detail must still come from the brief or the planned post. Greetings, enthusiasm and invitations are not claims."""
 
 
 def system_prompt(brief: BrandBrief) -> str:
@@ -27,6 +31,7 @@ def system_prompt(brief: BrandBrief) -> str:
 
 Be strict and specific. Never give a score above 3 without a concrete reason that points at the text.
 Any banned phrase, health claim, urgency pressure or promise the brief cannot back up means policy_risk of 2 or lower.
+{FACT_CHECK}
 
 {DATA_NOTE}
 
@@ -36,9 +41,10 @@ Reply with only a JSON object:
 
 
 def user_prompt(draft: Draft, planned: PlannedPost, brief: BrandBrief) -> str:
+    """The same planned_post block the writer gets, so the fact check judges against exactly the facts it had."""
     return "\n\n".join([
         data_block("brand_brief", brief.model_dump()),
-        data_block("post_goal", planned.goal),
+        data_block("planned_post", planned.model_dump(mode="json")),
         data_block("draft", draft.text),
         f"The draft is {len(draft.text)} characters. Score it.",
     ])
