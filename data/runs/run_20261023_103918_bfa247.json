@@ -1,0 +1,90 @@
+[
+  {
+    "ts": "2026-10-23T10:39:18.027783Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_outer",
+    "summary_out": "start: dry_run=False approval=True measure_only=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T10:39:18.049704Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "daily guard",
+    "summary_out": "32 model requests in the last 24 hours; this run may make 16",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T10:39:18.055711Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "measure candidates",
+    "summary_out": "2 to measure; none skipped",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-23T10:39:21.576599Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "tool_call",
+    "summary_in": "get_metrics | at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a",
+    "summary_out": "{\"likes\": 0, \"reposts\": 0, \"replies\": 0, \"fetched_at\": \"2026-10-23T10:39:21.574592+00:00\"}",
+    "ok": true,
+    "model": null,
+    "latency_ms": 3509
+  },
+  {
+    "ts": "2026-10-23T10:39:21.587516Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "tool_call",
+    "summary_in": "save_learning | post_b97bd440",
+    "summary_out": "{\"run_id\": \"run_20261023_103918_bfa247\", \"post_id\": \"post_b97bd440\", \"metrics\": {\"likes\": 0, \"reposts\": 0, \"replies\": 0}, \"insight\": \"Not enough data yet: under 2 likes, reposts and replies in total, so this post is not engagement evidence.\", \"saved_at\": \"2026-10-23T10:39:21.583394+00:00\"}",
+    "ok": true,
+    "model": null,
+    "latency_ms": 3
+  },
+  {
+    "ts": "2026-10-23T10:39:21.925497Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "tool_call",
+    "summary_in": "get_metrics | at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myjmverzkh2j",
+    "summary_out": "{\"likes\": 0, \"reposts\": 0, \"replies\": 0, \"fetched_at\": \"2026-10-23T10:39:21.922485+00:00\"}",
+    "ok": true,
+    "model": null,
+    "latency_ms": 323
+  },
+  {
+    "ts": "2026-10-23T10:39:21.943347Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "tool_call",
+    "summary_in": "save_learning | post_2283a2b4",
+    "summary_out": "{\"run_id\": \"run_20261023_103918_bfa247\", \"post_id\": \"post_2283a2b4\", \"metrics\": {\"likes\": 0, \"reposts\": 0, \"replies\": 0}, \"insight\": \"Not enough data yet: under 2 likes, reposts and replies in total, so this post is not engagement evidence.\", \"saved_at\": \"2026-10-23T10:39:21.940728+00:00\"}",
+    "ok": true,
+    "model": null,
+    "latency_ms": 3
+  },
+  {
+    "ts": "2026-10-23T10:39:21.954871Z",
+    "run_id": "run_20261023_103918_bfa247",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_summary sha256=9340ecb13f8154d77d1ca9e856126f7575aedbff09ef0426f79163f27639890e",
+    "summary_out": "{\"schema_version\": 1, \"run_id\": \"run_20261023_103918_bfa247\", \"exit_code\": 0, \"dry_run\": false, \"requests\": {\"used\": 0, \"limit\": 16}, \"requests_last_24h_before_run\": 32, \"plan\": null, \"outcomes\": [{\"post_id\": null, \"status\": \"skipped\", \"reason\": \"measure only\"}], \"learnings\": {\"saved\": [\"post_b97bd440\", \"post_2283a2b4\"], \"skipped\": []}, \"warnings\": []}",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  }
+]
