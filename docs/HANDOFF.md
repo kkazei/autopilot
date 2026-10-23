@@ -21,14 +21,15 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - Both were human-approved. Records are in `data/approved.jsonl`.
 - **Three runs on Oct 23 ended without a post** (traces committed as evidence): `d77bec` (placeholder topic; the writer's draft was 312 characters and the repair failed), `ee5488` (the approval prompt had no stdin because the run used the `!` prefix; the draft had also drifted off the topic), `c48e24` (8-attempt writer budget used up; minimax `:free` retired, poolside and gemma 429, cohere truncated).
 - **Built:** P1 harness core, `harness/llm.py`, the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py`, `scripts/run_post.py`, and (Day 2) link facets, the critic fact-check, topic-fit rules, dead-model skip, and the whole outer loop: `harness/measure.py`, `agents/analyst.py`, `agents/planner.py`, `harness/plan_state.py`, `harness/quota.py`, `loops/outer.py`, `scripts/run_outer.py`.
-- **Tests:** 343 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (253 at the start of today).
+- **Tests:** 348 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (253 at the start of today).
+- **Latest live attempt (Oct 23, 09:00 UTC, `run_20261023_090036_b0e71e`):** the topic fix worked (the draft was about the free sample loaf, passed on attempt 1, and the human declined it at the approval prompt, so nothing was published). Poolside 429'd then truncated; flint wrote the draft using 3,513 of its 4,096 tokens; poolside scored it 5/5. The draft was weak: it opened with the topic text word for word and said "Beginners often notice the crust and crumb first", an unsupported customer claim the critic missed. Both were addressed offline in `ca7af10` and are unproven on a real model. The repo's quota count undercounts by the 4 probe requests that went to a scratch folder: about 42 of 50 used by 09:05 UTC.
 - **Day 2 progress:** (a) link facets (`3935a10`); (b) critic fact-check (`3d96fe7`); (c) banned variants and (d) quota decision done earlier; topic drift fixed offline (`ffe39e1`); dead-model skip (`fc3abf0`); (f) outer loop committed in four chunks (`c26f11f`, `5b60760`, `975da5f`, `fa24b3e`) plus data (`d03dc07`). Still open: (e) more live posts, then D2-B, D2-C, D2-D, P2.
 - **Model chain (`.env`, changed today):** `poolside/laguna-s-2.1:free, recursive/flint-v1.0:free, google/gemma-4-31b-it:free, cohere/north-mini-code:free`. See decision 4.9 for why.
 - **Quota:** the repo's own count was 34 of 50 requests in the last 24 hours at about 08:50 UTC on Oct 23 (`quota.run_cap` counts failed attempts too, so it likely overstates). Do at most one more live post today.
 - **Known gaps remaining:**
   - Whether a real free model obeys the fact-check and topic-fit rules (critic) and the topic rule (writer) is unproven until a live run or D2-B calibration.
   - The outer loop has only run against `MockLLM`; its first real run will also be the first real planner and analyst call.
-  - The trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31).
+  - The critic passed a customer claim ("Beginners often notice the crust and crumb first") in `b0e71e`; the critic and writer prompts were tightened offline (`ca7af10`) and are unproven live. Flint spends about 3,500 tokens on a short post, so it is close to the 4,096-token truncation limit.
   - The 50 requests/day limit is unconfirmed for this account (issue 18; decided to stay at $0).
   - An unattended cron can never publish while approval is mandatory (decision 4.7 must be revisited for D2-D).
   - `run_post` still enforces "no `--no-approve` without `--dry-run`" only in its CLI; `run_outer` now enforces it inside `run_outer()` too.
@@ -54,7 +55,10 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `5b60760` | feat: measure published posts and save a learning for each | no |
 | `975da5f` | feat: weekly planner, plan state and daily request guard | no |
 | `fa24b3e` | feat: outer loop and run_outer script | no |
-| `d03dc07` | data: today's live post and run traces | no |
+| `d03dc07` | data: today's live post and run traces | yes |
+| `8c36255` | docs: update handoff for Day 2 progress, model chain and outer loop | yes |
+| `3f4d25a` | fix: keep the head and the tail of long trace summaries (issue 31) | no |
+| `ca7af10` | fix: stop the writer echoing the topic and the critic missing claims about customers | no |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
@@ -232,7 +236,7 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36 | **Decided** (Oct 23): stay at $0 and ration; the limit is still unconfirmed for this account |
 | 19 | URL in posts is plain text (no link facets); confirmed on the first live post | **Fixed** (`3935a10`), live-verified; local ISSUES_LOG 4.2 (not in git) still says Open |
 | 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | **Fixed offline** (`3d96fe7`); real-model behavior unproven until D2-B; local ISSUES_LOG 7.4 (not in git) still says Open |
-| 31 | `trace.py` keeps only the first 2,000 characters of each call summary (`SUMMARY_MAX_CHARS`), and the critic's messages run past 3,000, so the critic's trace events never show the draft or the planned post (confirmed in a dry run). Suggested fix: head-and-tail truncation in `harness/trace.py`, with its own tests | Open, schedule before D3-A (trace view) |
+| 31 | `trace.py` keeps only the first 2,000 characters of each call summary (`SUMMARY_MAX_CHARS`), and the critic's messages run past 3,000, so the critic's trace events never show the draft or the planned post (confirmed in a dry run). Suggested fix: head-and-tail truncation in `harness/trace.py`, with its own tests | **Fixed** (`3f4d25a`): the trace keeps the first 500 and last 1,500 characters with a marker, after redaction; a critic trace test shows the draft and planned post survive. Old traces keep the old format |
 | 32 | Writer and critic let a draft drift off the planned topic: the writer prompt never said the topic outranks the brief's class emphasis, and the critic never checked topic fit (`ee5488`: a free-sample-loaf topic became a bulk-fermentation draft scoring all 5s) | **Fixed offline** (`ffe39e1`: writer `TOPIC_RULE`, critic `TOPIC_FIT` caps clarity at 2); real-model behavior unproven |
 | 33 | A retired model (minimax `:free`, 404 from Oct 22) cost one upstream attempt on every `chat()` call, two of the writer's eight in `c48e24` | **Fixed** (`fc3abf0`: a 404'd model is skipped for the rest of the run); still remove dead ids from `OPENROUTER_MODELS` |
 | 34 | Free model pool is thin and unstable: poolside, gemma and xingchen 429 at times, cohere truncates, nemotron 404, poolside expires Oct 31 | Open: chain reordered Oct 23 (decision 4.9); flint added but proven for one tool call only; re-probe xingchen later |
@@ -357,7 +361,7 @@ Kept from the original handoff. Build this only after the first live post, withi
 - **Never add attribution trailers to commits or PRs.**
 - **Next action (Oct 23):**
   1. Wait for the free models' 429s to clear, then make **one** live post in a real terminal with a specific topic (the free-sample-loaf topic is a known drift case and tests the new writer and critic rules). The user must be present: approval stays on. Check the trace for which model wrote and scored it.
-  2. Fix issue 31 (trace truncation) so the critic's scores show in the trace.
+  2. Issue 31 (trace truncation) is fixed; the next live run is the first whose critic trace shows the draft and the scores.
   3. First real `run_outer` (try `--measure-only` first, since it is cheapest), then D2-B calibration, D2-C, D2-D.
   4. Item (d) stays decided: stay at $0 and ration requests (the repo counted 34 of 50 by about 08:50 UTC on Oct 23).
 - **Local ISSUES_LOG (not in git) is behind:** it still says issues 19 and 20 are Open and has no entry for issues 32-35.
