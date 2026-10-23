@@ -35,7 +35,7 @@ jobs:
       BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
       DRY_RUN: ${{ inputs.dry_run }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check the secrets are set (names only, never values)
         run: |
@@ -48,7 +48,7 @@ jobs:
           done
           exit $missing
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip

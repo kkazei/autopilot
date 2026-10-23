@@ -1,11 +1,11 @@
-# Autopilot handoff, updated 2026-10-23 late morning UTC (Day 1 complete, Day 2 code-complete with evidence outstanding)
+# Autopilot handoff, updated 2026-10-23 midday UTC (Day 1 complete, Day 2 code-complete with evidence outstanding)
 
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
 ## 1. Sources of truth
 - **Repo:** `C:\Users\jirro\orca\projects\autopilot` (Windows 11, PowerShell plus Git Bash).
   - Remote: `https://github.com/kkazei/autopilot` (private).
-  - Main branch `master`. Work now goes through short branches and pull requests: PRs #1 (all of Day 1-2 code), #2 (first learnings) and #3 (critic calibration tool) are **merged**; **PR #4** (hand scores and the first partial calibration run, plus this handoff) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
+  - Main branch `master`. Work now goes through short branches and pull requests: PRs #1 to #4 are **merged** (#1 all of Day 1-2 code, #2 first learnings, #3 the critic calibration tool, #4 the hand scores, the first partial calibration run and the handoff); **PR #5** (GitHub Actions bumped to v7 for Node 24, plus one bot data commit from its test run) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
   - **The GitHub workflow pushes data commits straight to `master`** (author `autopilot[bot]`, message `data: scheduled run <id>`). Run `git pull` before posting or branching, so you have its traces and any learnings it saved.
 - **Build plan (authoritative):** `C:\Users\jirro\Downloads\Autopilot 3-Day Build Plan and Claude Code Prompts.pdf` (30 pages).
   - It holds the repo layout, the data contracts, prompts D1-S to D3-C, the critic rubric, the failure table, deployment and the demo script.
@@ -31,6 +31,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **First GitHub workflow run (Oct 23, manual, `dry_run=false`, run 39942468962):** green in 15 seconds. The secrets check, install, `--measure-only` and the data push all passed; it found nothing new to measure (learnings already on `master`) and pushed only its own trace (`0963ce2`). The log shows the four secrets as `***`; a search of the log for the real values found none. The first **scheduled** run is 06:17 UTC on Oct 24.
 - **Calibration, first real run (`run_20261023_114019_557734`, partial):** 7 of 10 drafts scored, all by `poolside/laguna-s-2.1:free`, 11 requests, saved as `data/calibration/report.partial-run_20261023_114019_557734.md`. Pass/fail agreement 5 of 7. The critic is **too lenient on d03 and d06** (all 5s; the user scored 5/3/4/4 and 4/3/4/5) and its largest gap is on **clarity** (mean absolute error 1.29, critic higher by 0.43). On the deliberately bad drafts (d02, d05, d07) it agreed that they fail. It stopped at d08: poolside 429 three times, then flint truncated at 4,096 tokens, using up the draft's 4-request budget; d09 and d10 were not attempted. A complete run and the rubric fix (with before and after numbers) are still to do.
 - **Hand scores:** `data/calibration/drafts.csv` holds them, **34 of 40 numbers as the user entered and 6 adjusted by Claude at the user's request** ("decide for me"), only where a number contradicted the rubric's own wording (rule, list and reasons in `data/calibration/adjustments.md`; the user's first pass is `drafts.first_pass.csv`). No adjustment changes pass or fail (d01 and d04 pass before and after). The generated report discloses this and says the comparison is partly circular, because the review used the critic's own rubric. Say "34 of 40 are the user's own", not "all hand-scored".
+- **Offline leftovers (Oct 23, all done):** a full dry run with a scripted model (the plan cited a synthetic learning, one post passed on attempt 1, all five guardrails and the four publish re-checks passed, it published to a `dryrun://` URI, 3 of 16 requests used, the run summary was complete; the learning was synthetic and is not evidence); the full-history secret scan (clean, see R4 below); the Actions bump (PR #5, the data-push step tested green on its branch); local branches tidied; and the local ISSUES_LOG updated.
 - **Model chain (`.env`, changed today):** `poolside/laguna-s-2.1:free, recursive/flint-v1.0:free, google/gemma-4-31b-it:free, cohere/north-mini-code:free`. See decision 4.9 for why. In the calibration run poolside answered 7 critic calls in a row without trouble; it 429s in bursts. Flint spends close to its 4,096-token limit on one call.
 - **Quota:** the repo's own count was 43 of 50 requests in the last 24 hours at 11:44 UTC on Oct 23, but it undercounts by the 4 probe requests that went to a scratch folder, so the real figure is about 47. Nothing more should be spent today. The oldest of today's requests (from about 07:12 UTC) age out of the 24-hour window from about 07:12 UTC on Oct 24, so tomorrow morning has room again. The script `evals/calibrate_critic.py` caps a run at what the repo count says is left.
 - **Known gaps remaining:**
@@ -78,7 +79,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `3368c0d` | feat: critic calibration script and the ten drafts to hand-score (D2-B) (PR #3) | yes (`master`) |
 | `8723983` | fix: calibration run stops on a refused key and never loses scored drafts or a good report (PR #3) | yes (`master`) |
 | `6dfef98` | Merge pull request #3 (`feat/critic-calibration`) | yes (`master`) |
-| `6123c79` | data: hand scores and the first real critic calibration run (partial) (PR #4) | on `data/calibration-oct23`, **PR #4 open** |
+| `6123c79`, `59658c1`, `549882d` | data: hand scores and the first real critic calibration run (partial); handoff; merge of PR #4 | yes (`master`) |
+| `f809321` | ci: move checkout and setup-python to v7 (Node 24) (PR #5) | on `ci/actions-node24`, **PR #5 open** |
+| `e983feb` | data: scheduled run 39951119176 (the bot's push from the test run of `run.yml` on the PR branch) | on `ci/actions-node24`, PR #5 |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
@@ -223,7 +226,7 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 - [x] Separate CI workflow running pytest on every push and PR: `ci.yml`, green (414 tests, Ubuntu, Python 3.11)
 - [x] `docs/DEPLOY.md` written; merged to `master`, four repository secrets added, one manual run done
 - [ ] First scheduled run completes unattended (06:17 UTC, Oct 24): check the Actions tab in the morning
-- Warnings seen and left: GitHub's Node 20 deprecation for `actions/checkout@v4` and `actions/setup-python@v5` (a version bump is a small follow-up), and the `ubuntu-latest` migration to Ubuntu 26 (the runs passed on it)
+- Node 20 warning: fixed in PR #5 (open). `checkout` and `setup-python` are bumped to v7, which run on Node 24; CI is green, the Node 20 annotation is gone, and the data-push step was tested by dispatching `run.yml` from the PR branch (green, the bot's push worked). One leftover notice, the `ubuntu-latest` migration to Ubuntu 26, did not affect any run. A CI run with 0 jobs on that branch came from the bot's push, not from the code (ISSUES_LOG 9.11).
 - [ ] Trace page deployed (Cloudflare Pages or Vercel)
 
 **Block 5: Tier A runtime (P2, our addition)**
@@ -244,7 +247,7 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 - [ ] R1 diff review
 - [ ] R2 explain-it on each module
 - [ ] R3 adversarial tests
-- [ ] R4 secret scan of the whole repo history (every commit and PR diff since Day 1 was scanned as it was made, including an exact-value check against the real key and password; a single full-history scan is still to do, and is essential before the repo is ever made public)
+- [x] R4 secret scan of the whole repo history: done Oct 23 across all 40 commits on every branch. Exact-value check of the real API key and app password: 0 matches; the only secret-shaped strings are test fixtures and a code comment; no `.env`, key or credential file was ever committed. Not leaks, but worth a decision before the repo is ever made public: a local path in this handoff, the author email on every commit, and the Bluesky DID in tracked data files.
 - Done as it went: independent reviews of `feat/hermes-runtime` (Oct 22), of the link-facet code, of the outer loop (Oct 23), and of the calibration script (Oct 23, by a fresh reviewer who saw only the code)
 
 ## 7. Open issues from the Opus audit (2026-10-22)
@@ -401,10 +404,10 @@ Kept from the original handoff. Build this only after the first live post, withi
 - **Never add attribution trailers to commits or PRs.**
 - **Next actions (as of 11:45 UTC, Oct 23):**
   1. **Merge PR #4** (user): data and this handoff, CI green. Then `git pull` on a branch from `origin/master`.
-  2. **Spend no more quota today** (about 47 of 50 used). Offline work only: a full dry-run summary with a scripted model (asked for by the D2-A prompt), the Actions version bump for the Node 20 warning (check the versions exist first), the full-history secret scan (R4), tidying local branches, and the local ISSUES_LOG.
+  2. **Offline leftovers: done (Oct 23).** The scripted dry run, the full-history secret scan, local `master` fast-forwarded and the merged local branches deleted, the Actions bump (PR #5) and the local ISSUES_LOG (sections 9.1 to 9.13). **Spend no more quota today** (about 47 of 50 used). Merge PR #5 when ready.
   3. **Tomorrow morning, first thing, with a fresh quota:** (a) check the 06:17 UTC scheduled run in the Actions tab; (b) run the complete calibration (`--check` first, then for real; do it before anything else so the free models are least busy); (c) make the rubric fix and rerun once more for the before and after numbers, if quota allows; (d) one or more live posts in a real terminal (`run_post`, never with the `!` prefix, never with a placeholder topic); (e) the first real planner run through `run_outer`; (f) force each D2-C failure by hand.
   4. **Decide whether to cut P2** (the Hermes runtime). The pipeline already calls OpenRouter directly, which was the plan's own fallback.
   5. **Day 3 (Oct 24)** is mostly offline: D3-A dashboard and `scripts/export_dashboard_data.py` (plus the trace page deploy), D3-B README and `docs/DEMO.md`, the backup video, rehearsal. If the free-model pool is as shaky tomorrow as today, build the demo around what already works (two real posts, the learnings, the green workflow run, the partial calibration) and say plainly what is partial.
   6. Item (d) stays decided: stay at $0 and ration requests.
-- **Local ISSUES_LOG (not in git) is behind:** it still says issues 19 and 20 are Open and has no entry for issues 32-38.
+- **Local ISSUES_LOG (not in git) is up to date through Oct 23** (new section 9, entries 9.1 to 9.13, and the earlier statuses corrected). It mixes first person and the user's voice in a few places and may want rewording.
 - **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
