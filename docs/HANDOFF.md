@@ -19,7 +19,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 - **Built today:** P1 harness core, `harness/llm.py` (fallback chain, backoff, budgets, repair, truncation handling), the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py` and `scripts/run_post.py`.
 - **Tests:** 253 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (229 before Day 2).
 - **Day 2 progress:** (a) link facets done, live-verified (`3935a10`); (b) critic fact-check done offline (`3d96fe7`, committed, not pushed). Next: (e) start live posts early, and (f) the outer loop.
-- **Known gaps remaining:** whether a real free model obeys the new fact-check rule is unproven until D2-B calibration; the trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31); the quota decision (issue 18). See the Day 2 checklist in section 5.
+- **Known gaps remaining:** whether a real free model obeys the new fact-check rule is unproven until D2-B calibration; the trace keeps only 2,000 characters per call, so it never shows what the critic scored (issue 31); the 50 requests/day limit is unconfirmed for this account (issue 18; decided to stay at $0). See the Day 2 checklist in section 5.
 
 ## 3. Git state
 | Commit | What | Pushed |
@@ -80,7 +80,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - 5 tests added to `tests/test_inner_loop.py`; 253 pass on both interpreters; 7 mutation checks all killed; an in-process dry run replayed the yogurt draft (attempt 1 flagged, attempt 2 passed).
   - **Limits:** offline tests cannot show a free model obeys the rule (D2-B calibration or a live probe decides that; the live probe was skipped on purpose to save quota); the cap only blocks at `--min-score` 4 or 5; over-flagging of harmless generic detail is unmeasured (count revisions per post in D2-B).
 - [x] **(c) `check_banned` variants** (issue 17): done early, as review item 27 (inflections, spaced/dotted letters, no-space forms, `banned_variants` in the brief).
-- [ ] **(d) Decide the quota question** (issue 18): stay at 50 requests/day on $0, or not. Recommended plan: stay at $0 and ration (spread calibration over Day 2 and 3; buying credits is only a fallback). The 50/day limit is assumed from OpenRouter's docs and not yet confirmed for this account (a read-only check needs the user's approval).
+- [x] **(d) Quota decision** (issue 18): **decided Oct 23: stay at $0** (the user's goal is a free build to demo AI engineering). Ration the 50 requests/day: spread calibration over Day 2 and 3; buying credits is only a fallback if the user chooses it later. The 50/day limit is assumed from OpenRouter's docs and not yet confirmed for this account (a read-only check needs the user's approval).
 - [ ] **(e) Start posting early** with `scripts/run_post.py` (live, approval on) to build real engagement data. The 60-minute gap means 3-5 posts take 3+ hours of wall time.
 - [ ] **(f) D2-A:** metrics, analyst, learnings, planner, outer loop (and issue 16, read-after-post).
 - [ ] **(g) D2-B, D2-C, D2-D:** critic calibration, failure tests, deploy.
@@ -198,7 +198,7 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 | 15 | Narrow stale-lock race after a crash | Open, low |
 | 16 | `get_post_metrics` raises `BlueskyNotFound` when called right after posting, because the AppView hasn't indexed the post yet (seen in the step 4 throwaway post). It should retry briefly or treat a very new post as "not yet indexed", never as deleted, and the analyst must not read it as a deleted post | Open, D2-A |
 | 17 | `check_banned` misses word variants (cures, Glutenfree, Actnow, "best bakery in the town"); must be fixed before the Day 2 cron (D2-D). Suggested: prefix matching, no-space forms, and a variants list in the brief | **Fixed** by review item 27 (committed in `e48066d`) |
-| 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36. Decide before Day 2 | Open, decide before Day 2 |
+| 18 | OpenRouter free-tier limit: 50 requests/day assumed (under $10 of credits ever bought), 1,000/day with $10+; 20/min either way. One `run_post` costs 2-3 requests normally, up to 9 with 3 attempts, hard cap 36 | **Decided** (Oct 23): stay at $0 and ration; the limit is still unconfirmed for this account |
 | 19 | URL in posts is plain text (no link facets); confirmed on the first live post | **Fixed** (`3935a10`), live-verified; local ISSUES_LOG 4.2 (not in git) still says Open |
 | 20 | Critic passed a claim not in the brief ("starter smells like yogurt"); it is not given the planned post or a fact-check rule | **Fixed offline** (`3d96fe7`); real-model behavior unproven until D2-B; local ISSUES_LOG 7.4 (not in git) still says Open |
 | 31 | `trace.py` keeps only the first 2,000 characters of each call summary (`SUMMARY_MAX_CHARS`), and the critic's messages run past 3,000, so the critic's trace events never show the draft or the planned post (confirmed in a dry run). Suggested fix: head-and-tail truncation in `harness/trace.py`, with its own tests | Open, schedule before D3-A (trace view) |
@@ -320,5 +320,5 @@ Kept from the original handoff. Build this only after the first live post, withi
 - Do not redo or re-ask settled decisions (section 4). Do not invent MCP tools or rename the PDF's files without a reason.
 - Follow CLAUDE.md's definition of done: tests pass, no secrets in the diff, trace verified by running once, and a 3-line summary.
 - **Never add attribution trailers to commits or PRs.**
-- **Next action:** Day 2 item (e), start live posts early (the user must be present: approval stays on), with (f), the outer loop, in parallel. State a plan and wait for the user's go. Item (d), the quota decision, is the user's and should come before live posting starts.
+- **Next action:** Day 2 item (e), start live posts early (the user must be present: approval stays on), with (f), the outer loop, in parallel. State a plan and wait for the user's go. Item (d) is decided: stay at $0 and ration requests.
 - **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
