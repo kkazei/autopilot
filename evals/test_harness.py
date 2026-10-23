@@ -172,6 +172,27 @@ def test_trace_truncates_long_summaries_unless_told_not_to(run_id):
     assert len(full.summary_in) == 5000
 
 
+def test_truncation_keeps_the_head_and_the_tail_and_says_how_much_was_cut(run_id):
+    text = "START-" + "m" * 5000 + "-THE-DRAFT-IS-HERE"
+    trace.log_event(run_id, "critic", "llm_call", text, "ok", ok=True)
+    [event] = trace.read_run(run_id)
+    assert event.summary_in.startswith("START-") and event.summary_in.endswith("-THE-DRAFT-IS-HERE")
+    assert f"[truncated {len(text) - trace.SUMMARY_MAX_CHARS} chars]" in event.summary_in
+    assert len(event.summary_in) < trace.SUMMARY_MAX_CHARS + 100
+    assert len(event.summary_in.split("...[truncated")[1].split("]...")[1]) == trace.SUMMARY_MAX_CHARS * 3 // 4
+
+
+def test_a_secret_on_the_cut_is_redacted_whole_not_left_half_visible(run_id, monkeypatch):
+    secret = "canary-secret-value-987654"
+    monkeypatch.setenv("OPENROUTER_API_KEY", secret)
+    cut = trace.SUMMARY_MAX_CHARS // 4
+    text = "a" * (cut - 10) + secret + "b" * 4000  # the secret starts 10 characters before the head ends
+    trace.log_event(run_id, "harness", "decision", text, "ok", ok=True)
+    [event] = trace.read_run(run_id)
+    assert secret not in event.summary_in and "canary-sec" not in event.summary_in
+    assert "[REDACTED:" in event.summary_in  # the cut may take the end of the marker, never a piece of the secret
+
+
 def test_corrupt_trace_fails_closed_and_is_not_overwritten(run_id):
     path = trace.run_path(run_id)
     path.write_text("{not json", encoding="utf-8")

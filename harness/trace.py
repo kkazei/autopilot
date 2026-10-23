@@ -72,10 +72,17 @@ def redact(text: str) -> str:
 
 
 def _summarize(text: str, truncate: bool) -> str:
+    """Redact first, then cut, so a secret straddling the cut is replaced whole and never left half visible.
+
+    The head and the tail are both kept: an llm_call's input ends with the data the model was judging (the
+    planned post, the draft), and keeping only the start hid exactly that (ISSUES_LOG 31, run_..._b0e71e).
+    """
     text = redact(str(text))
     if truncate and len(text) > SUMMARY_MAX_CHARS:
+        head = SUMMARY_MAX_CHARS // 4
+        tail = SUMMARY_MAX_CHARS - head
         dropped = len(text) - SUMMARY_MAX_CHARS
-        text = f"{text[:SUMMARY_MAX_CHARS]}...[truncated {dropped} chars]"
+        text = f"{text[:head]}...[truncated {dropped} chars]...{text[-tail:]}"
     return text
 
 
