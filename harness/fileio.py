@@ -26,16 +26,22 @@ class LockTimeout(TimeoutError):
     """Raised instead of writing unlocked: callers fail closed rather than risk a torn file."""
 
 
-def _break_if_stale(lock: Path) -> None:
-    """A lock that outlives any real write belongs to a crashed process; holding it forever would wedge every run."""
+def _break_if_stale(lock: Path, stale_s: float) -> bool:
+    """A lock that outlives any real hold belongs to a crashed process; holding it forever would wedge every run."""
     with contextlib.suppress(OSError):
-        if time.time() - lock.stat().st_mtime > STALE_LOCK_S:
+        if time.time() - lock.stat().st_mtime > stale_s:
             lock.unlink()
+            return True
+    return False
 
 
 @contextlib.contextmanager
-def file_lock(path: Path, timeout_s: float = LOCK_TIMEOUT_S) -> Iterator[None]:
-    """Lock `path` via an O_EXCL sibling file, which behaves the same on Windows and POSIX (unlike fcntl/msvcrt)."""
+def file_lock(path: Path, timeout_s: float = LOCK_TIMEOUT_S, stale_s: float = STALE_LOCK_S) -> Iterator[None]:
+    """Lock `path` via an O_EXCL sibling file, which behaves the same on Windows and POSIX (unlike fcntl/msvcrt).
+
+    `stale_s` must exceed the longest legitimate hold: the outer run holds its lock for minutes (and across a
+    human approval prompt), so it passes a much larger value than the 60s that suits a single file write.
+    """
     lock = path.with_name(path.name + ".lock")
     lock.parent.mkdir(parents=True, exist_ok=True)
     deadline = time.monotonic() + timeout_s
@@ -45,7 +51,8 @@ def file_lock(path: Path, timeout_s: float = LOCK_TIMEOUT_S) -> Iterator[None]:
             break
         except (FileExistsError, PermissionError):
             # Windows reports PermissionError while another process is mid-delete of the lock.
-            _break_if_stale(lock)
+            if _break_if_stale(lock, stale_s):
+                continue  # retry at once: with timeout_s=0 a broken lock must not still read as "busy"
             if time.monotonic() >= deadline:
                 raise LockTimeout(f"could not lock {path.name} within {timeout_s}s") from None
             time.sleep(_POLL_S)

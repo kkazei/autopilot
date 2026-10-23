@@ -684,3 +684,21 @@ def test_check_banned_catches_variants(text):
 ])
 def test_check_banned_does_not_block_ordinary_words(text):
     assert guardrails.check_banned(text, REAL_BRIEF)["ok"], text
+
+
+def test_file_lock_stale_s_controls_when_a_held_lock_is_broken(tmp_path):
+    import os
+
+    from harness.fileio import LockTimeout, file_lock
+
+    target = tmp_path / "thing"
+    lock = tmp_path / "thing.lock"
+    lock.write_text("123")
+    old = lock.stat().st_mtime - 120  # 2 minutes old: stale at the 60s default, live at 1h
+    os.utime(lock, (old, old))
+    with pytest.raises(LockTimeout):
+        with file_lock(target, timeout_s=0, stale_s=3600):
+            pass
+    assert lock.exists()
+    with file_lock(target, timeout_s=0):  # default 60s: the old lock is broken
+        pass

@@ -197,16 +197,36 @@ def _describe(response: LLMResponse) -> str:
 @dataclass
 class Budget:
     """Upstream attempts left for one agent invocation (decision 4.4), shared by its tool rounds and its repair,
-    so one stubborn post cannot drain the free daily quota."""
+    so one stubborn post cannot drain the free daily quota.
+
+    A budget may have a parent (the whole run, or the run's measurement phase): every attempt is charged to
+    each level, so no single agent budget can push a run past its own cap.
+    """
 
     limit: int
     used: int = 0
+    parent: Budget | None = None
+
+    def exhausted_by(self) -> Budget | None:
+        """The innermost budget with nothing left, or None while every level still has attempts."""
+        if self.used >= self.limit:
+            return self
+        return self.parent.exhausted_by() if self.parent is not None else None
 
     def take(self) -> bool:
-        if self.used >= self.limit:
+        """Charge one attempt to this budget and every parent, or charge none of them."""
+        if self.exhausted_by() is not None:
             return False
-        self.used += 1
+        budget: Budget | None = self
+        while budget is not None:
+            budget.used += 1
+            budget = budget.parent
         return True
+
+
+def _budget_error(agent: str, budget: Budget) -> LLMBudgetExceeded:
+    blocker = budget.exhausted_by() or budget
+    return LLMBudgetExceeded(f"{agent}: upstream attempt budget of {blocker.limit} used up")
 
 
 ROLE_BUDGETS: dict[str, int] = {"planner": 12, "writer": 8, "critic": 4, "analyst": 12}
@@ -353,9 +373,11 @@ class OpenRouterLLM(LLM):
                 continue
             for attempt in range(1, self.max_tries + 1):
                 if budget is not None and not budget.take():
+                    blocker = budget.exhausted_by() or budget
                     trace.log_event(run_id, agent, "decision", f"{model}: attempt budget",
-                                    f"stop: upstream attempt budget of {budget.limit} used up", ok=False, model=model)
-                    raise LLMBudgetExceeded(f"{agent}: upstream attempt budget of {budget.limit} used up")
+                                    f"stop: upstream attempt budget of {blocker.limit} used up", ok=False,
+                                    model=model)
+                    raise _budget_error(agent, budget)
                 outcome = self._attempt(model, messages, tools, max_tokens)
                 if isinstance(outcome, LLMResponse):
                     trace.log_event(run_id, agent, "llm_call", summary_in, _describe(outcome), ok=True,
@@ -424,7 +446,7 @@ class MockLLM(LLM):
              tools: list[dict[str, Any]] | None = None, *, max_tokens: int = DEFAULT_MAX_TOKENS,
              budget: Budget | None = None) -> LLMResponse:
         if budget is not None and not budget.take():
-            raise LLMBudgetExceeded(f"{agent}: upstream attempt budget of {budget.limit} used up")
+            raise _budget_error(agent, budget)
         self.calls.append(list(messages))
         self.tools_offered.append([t["function"]["name"] for t in tools or []])
         if not self._script:

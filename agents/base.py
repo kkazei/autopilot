@@ -8,8 +8,10 @@ server exposes, so the server's call log and checks still apply.
 
 from __future__ import annotations
 
+import contextlib
 import inspect
 import json
+from collections.abc import Iterator
 from typing import Any
 
 from harness import trace
@@ -60,7 +62,7 @@ class ToolDispatcher:
         if name not in self.allowed:
             trace.log_event(self.run_id, self.role, "tool_call", summary_in,
                             f"refused: {name!r} is not in the {self.role} allowlist", ok=False)
-            return json.dumps({"error": f"tool {name!r} is not available to you"})
+            return data_block(f"tool_result:{name}", json.dumps({"error": f"tool {name!r} is not available to you"}))
         tool = server.TOOLS[name]
         with trace.step(self.run_id, self.role, "tool_call", summary_in) as s:
             try:
@@ -76,11 +78,35 @@ class ToolDispatcher:
                 except Exception as e:  # noqa: BLE001 - a broken tool must not crash the agent; the model gets an error
                     s.ok, result = False, json.dumps({"error": f"tool failed: {type(e).__name__}"})
             s.summary_out = result
-        return result
+        # Results hold stored text (learnings, the brief) that an earlier run or a person wrote: the model gets
+        # them as data, like every other untrusted block in a prompt, not as a bare tool message.
+        return data_block(f"tool_result:{name}", result)
 
 
-def budget_for(role: Agent) -> Budget:
-    return Budget(ROLE_BUDGETS[role])
+_run_budget: Budget | None = None
+
+
+@contextlib.contextmanager
+def run_budget(limit: int) -> Iterator[Budget]:
+    """Cap the upstream attempts of every agent invoked inside the block, whatever their own budgets are.
+
+    Module state rather than a parameter so the writer, critic and inner-loop signatures stay as they are;
+    the outer run is single-threaded and holds a lock, so there is only ever one.
+    """
+    global _run_budget
+    previous, _run_budget = _run_budget, Budget(limit)
+    try:
+        yield _run_budget
+    finally:
+        _run_budget = previous
+
+
+def current_run_budget() -> Budget | None:
+    return _run_budget
+
+
+def budget_for(role: Agent, parent: Budget | None = None) -> Budget:
+    return Budget(ROLE_BUDGETS[role], parent=parent if parent is not None else _run_budget)
 
 
 def data_block(label: str, value: Any) -> str:
