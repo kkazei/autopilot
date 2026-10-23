@@ -14,6 +14,10 @@ from harness.schemas import MAX_POST_CHARS, BrandBrief, Critique, Draft, Planned
 ROLE = "writer"
 # Asked for below the hard cap: models overshoot (348 characters on the first live run), and Draft rejects 301+.
 TARGET_CHARS = 280
+# Run run_20261023_082541_ee5488: the topic was a free sample loaf offer, the draft was about bulk fermentation.
+# The brief's goal and "do" list are all about class and craft detail, and nothing said the topic outranks them.
+TOPIC_RULE = ("Write about the planned_post topic and use its angle. The brief says how to sound and what is "
+              "allowed, not what to write about; if the topic is an offer, the offer must appear in the post.")
 REPAIR_HINT = f"Keep the text to {TARGET_CHARS} characters or fewer."
 
 
@@ -26,6 +30,7 @@ Rules:
 - Never use any banned phrase, in any spelling or form: {"; ".join([*brief.banned_phrases, *brief.banned_variants])}.
 - {TARGET_CHARS} characters or fewer, counting the link (the hard limit is {MAX_POST_CHARS}). One idea. End with one clear, low-pressure next step that fits the goal.
 - Only state facts that are in the brief or the planned post.
+- {TOPIC_RULE}
 
 {DATA_NOTE}
 
