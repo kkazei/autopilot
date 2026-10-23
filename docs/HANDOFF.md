@@ -21,9 +21,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - Both were human-approved. Records are in `data/approved.jsonl`.
 - **Three runs on Oct 23 ended without a post** (traces committed as evidence): `d77bec` (placeholder topic; the writer's draft was 312 characters and the repair failed), `ee5488` (the approval prompt had no stdin because the run used the `!` prefix; the draft had also drifted off the topic), `c48e24` (8-attempt writer budget used up; minimax `:free` retired, poolside and gemma 429, cohere truncated).
 - **Built:** P1 harness core, `harness/llm.py`, the live Bluesky client, log-before-publish, writer, critic, inner loop, `harness/publish.py`, `scripts/run_post.py`, and (Day 2) link facets, the critic fact-check, topic-fit rules, dead-model skip, and the whole outer loop: `harness/measure.py`, `agents/analyst.py`, `agents/planner.py`, `harness/plan_state.py`, `harness/quota.py`, `loops/outer.py`, `scripts/run_outer.py`.
-- **Tests:** 348 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (253 at the start of today).
+- **Tests:** 360 passing offline on Python 3.14.8 (`.venv`) and 3.11.16 (`.venv311`) (253 at the start of today).
 - **Latest live attempt (Oct 23, 09:00 UTC, `run_20261023_090036_b0e71e`):** the topic fix worked (the draft was about the free sample loaf, passed on attempt 1, and the human declined it at the approval prompt, so nothing was published). Poolside 429'd then truncated; flint wrote the draft using 3,513 of its 4,096 tokens; poolside scored it 5/5. The draft was weak: it opened with the topic text word for word and said "Beginners often notice the crust and crumb first", an unsupported customer claim the critic missed. Both were addressed offline in `ca7af10` and are unproven on a real model. The repo's quota count undercounts by the 4 probe requests that went to a scratch folder: about 42 of 50 used by 09:05 UTC.
-- **Day 2 progress:** (a) link facets (`3935a10`); (b) critic fact-check (`3d96fe7`); (c) banned variants and (d) quota decision done earlier; topic drift fixed offline (`ffe39e1`); dead-model skip (`fc3abf0`); (f) outer loop committed in four chunks (`c26f11f`, `5b60760`, `975da5f`, `fa24b3e`) plus data (`d03dc07`). Still open: (e) more live posts, then D2-B, D2-C, D2-D, P2.
+- **Day 2 progress:** (a) link facets (`3935a10`); (b) critic fact-check (`3d96fe7`); (c) banned variants and (d) quota decision done earlier; topic drift fixed offline (`ffe39e1`); dead-model skip (`fc3abf0`); (f) outer loop committed in four chunks (`c26f11f`, `5b60760`, `975da5f`, `fa24b3e`) plus data (`d03dc07`). D2-C failure tests done (`d447a21`); D2-D workflow files and `docs/DEPLOY.md` written and checked locally (`f9dff75`, never run on GitHub). Still open: (e) more live posts, D2-B calibration, first real `run_outer`, merging to `master` so the workflows can run, P2.
 - **Model chain (`.env`, changed today):** `poolside/laguna-s-2.1:free, recursive/flint-v1.0:free, google/gemma-4-31b-it:free, cohere/north-mini-code:free`. See decision 4.9 for why.
 - **Quota:** the repo's own count was 34 of 50 requests in the last 24 hours at about 08:50 UTC on Oct 23 (`quota.run_cap` counts failed attempts too, so it likely overstates). Do at most one more live post today.
 - **Known gaps remaining:**
@@ -31,7 +31,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - The outer loop has only run against `MockLLM`; its first real run will also be the first real planner and analyst call.
   - The critic passed a customer claim ("Beginners often notice the crust and crumb first") in `b0e71e`; the critic and writer prompts were tightened offline (`ca7af10`) and are unproven live. Flint spends about 3,500 tokens on a short post, so it is close to the 4,096-token truncation limit.
   - The 50 requests/day limit is unconfirmed for this account (issue 18; decided to stay at $0).
-  - An unattended cron can never publish while approval is mandatory (decision 4.7 must be revisited for D2-D).
+  - The GitHub schedule only measures (decision 4.11); it can never publish. The workflows have not run on GitHub and only work from `master`.
   - `run_post` still enforces "no `--no-approve` without `--dry-run`" only in its CLI; `run_outer` now enforces it inside `run_outer()` too.
 - See the Day 2 checklist in section 5.
 
@@ -59,6 +59,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `8c36255` | docs: update handoff for Day 2 progress, model chain and outer loop | yes |
 | `3f4d25a` | fix: keep the head and the tail of long trace summaries (issue 31) | no |
 | `ca7af10` | fix: stop the writer echoing the topic and the critic missing claims about customers | no |
+| `43b7545` | docs: handoff for issue 31 fix, prompt tightening and the b0e71e run | no |
+| `d447a21` | test: end-to-end failure-handling tests for the seven D2-C cases (`evals/test_failure_handling.py`) | no |
+| `f9dff75` | ci: GitHub Actions workflows and deploy doc (D2-D) | no |
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
@@ -89,6 +92,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
    - nemotron (404) and inkling (403) were dropped earlier, on Day 1.
    - `harness/llm.py` now skips a model that returned 404 for the rest of that client's life (one run), at the cost of one wasted slot per dead model per run until its id is removed.
 10. **Truncation fix:** `max_tokens` 4,096; `finish_reason=length` moves to the next model; OpenRouter's `reasoning` setting deliberately not used.
+11. **Cron posting (decided Oct 23):** the scheduled GitHub run only measures (`scripts.run_outer --measure-only`). Live posts stay local with human approval on, because a runner cannot answer the approval prompt. This settles the 4.7 revisit for D2-D without loosening it. Rejected: a cron that posts with approval off, and a pre-approved drafts queue (new code, not Day 2). A manual `dry_run` run does the whole loop without publishing.
 
 ## 5. Task list
 ### Day 1 (done)
@@ -118,8 +122,11 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
   - **Review of this code (Oct 23):** no architecture-rule violations. Two findings fixed with tests and mutation checks: the planner now cites only learnings with signal (while every learning is "not enough data" no citation is required), and `run_outer()` itself refuses approval-off for a live run.
   - **Design note:** with approval mandatory, an unattended run writes a draft nobody can approve, so the post is carried forward and the requests are wasted (D2-D, decision 4.7).
   - The first real outer run is also the first real planner and analyst call; expect to find prompt problems.
-- [ ] **(g) D2-B, D2-C, D2-D:** critic calibration, failure tests, deploy.
-- **Note:** the approval flag (decision 4.7) must be revisited deliberately for the cron in D2-D, not loosened before then.
+- [~] **(g) D2-B, D2-C, D2-D:**
+  - **D2-B** critic calibration: not started (it is the biggest quota spender; do it once the quota frees up).
+  - **D2-C** failure tests: **done** (`d447a21`, 12 tests, mutation-checked; no code bugs surfaced).
+  - **D2-D** deploy: **files written, never run on GitHub** (`f9dff75`). Needs the workflows merged to `master` and the four secrets added (`docs/DEPLOY.md`).
+- **Note:** the approval flag (decision 4.7) stays mandatory; decision 4.11 settles the cron as measure-only.
 
 ## 6. PDF checklist with current status
 
@@ -184,13 +191,13 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 - [ ] About 10 drafts, including bad ones, hand-scored; `evals/calibrate_critic.py`; `data/calibration/report.md`; one rubric fix with before and after numbers
 
 **Block 3: failure-handling tests (D2-C, tests 1-7 verbatim)**
-- [ ] Revision cap, JSON repair, rate cap, banned phrase, 429 fallback, publish ordering, prompt injection
-- [ ] Force each failure once by hand and confirm it in the trace
+- [x] Revision cap, JSON repair, rate cap, banned phrase, 429 fallback, publish ordering, prompt injection (`evals/test_failure_handling.py`, each driven through a whole `run_post` and checked in the trace or call log)
+- [ ] Force each failure once by hand against the real system and confirm it in the trace (the tests use mocks; this step is not done)
 
 **Block 4: deploy (D2-D)**
-- [ ] `.github/workflows/run.yml` (cron plus `workflow_dispatch` with `dry_run`, Python 3.11, concurrency group, 20-minute timeout, commits `data/`)
-- [ ] Separate CI workflow running pytest on every push
-- [ ] `docs/DEPLOY.md`, repository secrets added, a manual run, then a scheduled run
+- [~] `.github/workflows/run.yml` written (cron 06:17 UTC assumed, `workflow_dispatch` with `dry_run`, Python 3.11, concurrency group, 20-minute timeout, commits `data/`); the schedule is measure-only (decision 4.11). YAML parsed and the secrets check and clean-checkout boot tested locally; never run on GitHub
+- [~] Separate CI workflow running pytest on every push: `ci.yml` written, not yet run
+- [~] `docs/DEPLOY.md` written; still to do: merge to `master`, add the four repository secrets, a manual run, then a scheduled run
 - [ ] Trace page deployed (Cloudflare Pages or Vercel)
 
 **Block 5: Tier A runtime (P2, our addition)**
@@ -362,7 +369,9 @@ Kept from the original handoff. Build this only after the first live post, withi
 - **Next action (Oct 23):**
   1. Wait for the free models' 429s to clear, then make **one** live post in a real terminal with a specific topic (the free-sample-loaf topic is a known drift case and tests the new writer and critic rules). The user must be present: approval stays on. Check the trace for which model wrote and scored it.
   2. Issue 31 (trace truncation) is fixed; the next live run is the first whose critic trace shows the draft and the scores.
-  3. First real `run_outer` (try `--measure-only` first, since it is cheapest), then D2-B calibration, D2-C, D2-D.
-  4. Item (d) stays decided: stay at $0 and ration requests (the repo counted 34 of 50 by about 08:50 UTC on Oct 23).
+  3. First real `run_outer` (try `--measure-only` first, since it is cheapest), then D2-B calibration. D2-C is done; D2-D is written.
+  4. Merge `feat/hermes-runtime` to `master` (a PR), add the four repository secrets and do the first manual run, following `docs/DEPLOY.md`. Until the workflows are on `master`, neither the schedule nor "Run workflow" works. Pushing and merging are the user's call.
+  5. Item (d) stays decided: stay at $0 and ration requests (about 42 of 50 used by 09:05 UTC on Oct 23, counting 4 probe requests the repo's own count misses).
+  6. Day 3 (Oct 24) is mostly offline: D3-A dashboard and `scripts/export_dashboard_data.py`, D3-B README and `docs/DEMO.md`, the backup video.
 - **Local ISSUES_LOG (not in git) is behind:** it still says issues 19 and 20 are Open and has no entry for issues 32-35.
 - **Process note:** a status question is not a go-ahead. Do not start editing code until the user says so.
