@@ -12,6 +12,7 @@ with a fresh clock, writes a "pending" row, posts, then writes the "published" r
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import secrets
 from collections.abc import Callable, Iterator
@@ -21,7 +22,7 @@ from typing import Any
 
 from harness import guardrails, trace
 from harness.fileio import LockTimeout, append_jsonl, file_lock, read_jsonl
-from harness.schemas import CRITIQUE_DIMENSIONS, BrandBrief, Critique, Draft, passes_threshold
+from harness.schemas import CRITIQUE_DIMENSIONS, BrandBrief, Critique, Draft, Learning, passes_threshold
 from mcp_server import bluesky, server
 
 APPROVED_FILE = "approved.jsonl"
@@ -192,3 +193,34 @@ def _publish_locked(run_id: str, draft: Draft, critique: Critique, brief: BrandB
     except trace.TraceWriteError as e:
         warnings.append(f"trace write failed ({e})")
     return {**record, "warnings": warnings}
+
+
+def fetch_metrics(run_id: str, uri: str) -> dict[str, Any]:
+    """Read one post's counts as the harness, traced as a tool call.
+
+    The harness reads metrics itself instead of offering the tool to the analyst: the model then cannot
+    choose which post to look at, or invent a URI (the analyst's prompt already holds the numbers).
+    """
+    with trace.step(run_id, "harness", "tool_call", f"get_metrics | {uri}") as s:
+        with _harness_env(False):
+            result = server.get_metrics(uri)
+        s.summary_out = json.dumps(result, ensure_ascii=False)
+    return result
+
+
+def record_learning(run_id: str, learning: Learning) -> dict[str, Any]:
+    """Store one learning. Here so this file stays the only caller of the harness-only tools (HANDOFF section 9)."""
+    with trace.step(run_id, "harness", "tool_call", f"save_learning | {learning.post_id}") as s:
+        with _harness_env(False):
+            saved = server.save_learning(learning.model_dump())
+        s.summary_out = json.dumps(saved, ensure_ascii=False)
+    return saved
+
+
+def fetch_learnings(run_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    """The learnings the planner is shown and is checked against: the harness reads them, not the model."""
+    with trace.step(run_id, "harness", "tool_call", f"get_learnings | limit={limit}") as s:
+        with _harness_env(False):
+            result = server.get_learnings(limit)
+        s.summary_out = f"{len(result)} learnings: " + ", ".join(r["post_id"] for r in result)
+    return result
