@@ -340,6 +340,7 @@ class OpenRouterLLM(LLM):
         jitter: Callable[[], float] = random.random,
         max_tries: int = MAX_TRIES_PER_MODEL,
         timeout_s: float = TIMEOUT_S,
+        temperature: float | None = None,
     ) -> None:
         self.models = models_from_env({MODELS_ENV: ",".join(models)}) if models is not None else models_from_env()
         self._key = api_key if api_key is not None else os.environ.get(KEY_ENV, "")
@@ -352,6 +353,10 @@ class OpenRouterLLM(LLM):
         self._jitter = jitter
         self.max_tries = max_tries
         self.timeout_s = timeout_s
+        # Left out of the request unless set, so every existing caller keeps each model's own default. The
+        # calibration script sets 0 to make a critic's scores repeatable; a model that rejects the field answers 400
+        # and the chain moves to the next one like any other skip.
+        self.temperature = temperature
         # Models that answered 404 on this client. A run makes many chat() calls (tool rounds, repair, revisions),
         # and a retired model at the head of the chain cost one budget slot on every one of them (run_..._c48e24).
         self._dead: set[str] = set()
@@ -413,6 +418,8 @@ class OpenRouterLLM(LLM):
         payload: dict[str, Any] = {"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False}
         if tools:
             payload["tools"] = tools
+        if self.temperature is not None:
+            payload["temperature"] = self.temperature
         headers = {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json",
                    "X-Title": "Autopilot"}
         started = time.perf_counter()
