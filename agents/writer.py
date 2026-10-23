@@ -18,6 +18,12 @@ TARGET_CHARS = 280
 # The brief's goal and "do" list are all about class and craft detail, and nothing said the topic outranks them.
 TOPIC_RULE = ("Write about the planned_post topic and use its angle. The brief says how to sound and what is "
               "allowed, not what to write about; if the topic is an offer, the offer must appear in the post.")
+# Run run_20261023_090036_b0e71e: the draft opened with the topic pasted word for word, then added "Beginners often
+# notice the crust and crumb first", a claim about customers that neither the brief nor the plan supports.
+STYLE_RULE = ("Say the topic the way the bakery would say it aloud: do not open with its text word for word. Do not "
+              "say what people usually do, notice or feel, because that is a claim about customers. Where it fits, "
+              "mention one thing the brief names (crust, crumb, flour, the oven) without describing how it smells, "
+              "tastes or feels beyond what the brief says.")
 REPAIR_HINT = f"Keep the text to {TARGET_CHARS} characters or fewer."
 
 
@@ -31,6 +37,7 @@ Rules:
 - {TARGET_CHARS} characters or fewer, counting the link (the hard limit is {MAX_POST_CHARS}). One idea. End with one clear, low-pressure next step that fits the goal.
 - Only state facts that are in the brief or the planned post.
 - {TOPIC_RULE}
+- {STYLE_RULE}
 
 {DATA_NOTE}
 

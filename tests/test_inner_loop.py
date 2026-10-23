@@ -260,6 +260,30 @@ def test_off_topic_draft_fails_and_its_reason_reaches_the_revision(run_id):
     assert "free sample loaf offer" in data_body(llm.calls[2][-1]["content"], "critic_reasons")
 
 
+def test_writer_system_prompt_forbids_topic_echo_and_claims_about_customers():
+    prompt = writer.system_prompt(BRIEF)
+    assert writer.STYLE_RULE in prompt
+    assert "do not open with its text word for word" in prompt
+    assert "claim about customers" in prompt
+
+
+def test_critic_treats_claims_about_audiences_as_factual_claims():
+    prompt = critic.system_prompt(BRIEF)
+    assert "what customers or audiences usually do, notice, feel or want" in prompt
+    assert '"beginners often notice..."' in prompt
+    assert "policy_risk of 3 or lower" in prompt  # the cap those claims fall under is unchanged
+
+
+def test_the_critic_trace_event_shows_the_draft_and_the_planned_post(run_id, monkeypatch):
+    """ISSUES_LOG 31: the critic's input is far longer than the trace limit, and the data sat after the cut."""
+    monkeypatch.setattr("harness.trace.SUMMARY_MAX_CHARS", 1200)  # the real 2,000 with a longer brief behaves alike
+    text = "Book your first class and take a free loaf home."
+    critic.critique(MockLLM([scores()]), run_id, Draft(post_id="post_t2", text=text, attempt=1), CLASS_PLAN, BRIEF)
+    [event] = [e for e in trace.read_run(run_id) if e.agent == "critic" and e.kind == "llm_call"]
+    assert "truncated" in event.summary_in  # the input really was cut
+    assert text in event.summary_in and CLASS_PLAN.topic in event.summary_in
+
+
 def test_writer_system_prompt_puts_the_topic_above_the_briefs_emphasis():
     prompt = writer.system_prompt(BRIEF)
     assert writer.TOPIC_RULE in prompt
