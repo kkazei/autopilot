@@ -1,0 +1,36 @@
+{
+  "name": "Bramblewick Bakehouse",
+  "one_liner": "A neighborhood sourdough bakery that teaches small, hands-on weekend bread classes.",
+  "audience": "Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.",
+  "voice": ["warm", "unhurried", "craft-proud"],
+  "do": [
+    "Talk about one bake, one technique or one class detail per post",
+    "Use concrete sensory details: crust, crumb, flour, the smell of the oven",
+    "Make beginners feel welcome; mistakes are part of baking",
+    "End with one clear, low-pressure next step"
+  ],
+  "dont": [
+    "Use urgency or scarcity pressure",
+    "Make health, nutrition or weight-loss claims",
+    "Mention or criticize competitors",
+    "Promise results we cannot back up",
+    "Use more than two hashtags or any all-caps shouting"
+  ],
+  "banned_phrases": [
+    "act now",
+    "limited time only",
+    "guaranteed results",
+    "best bakery in town",
+    "gluten-free",
+    "cure",
+    "click here",
+    "don't miss out"
+  ],
+  "banned_variants": [
+    "results guaranteed",
+    "do not miss out",
+    "curative"
+  ],
+  "goal": "Drive signups for the Saturday beginner sourdough class.",
+  "cta_url": "https://example.com/bramblewick/classes"
+}

@@ -1,0 +1,7 @@
+# Runtime
+mcp==2.0.0          # official MCP SDK: the tool server and the harness's MCP client
+pydantic>=2,<3      # data contracts; also pulled in by mcp, pinned here because we import it directly
+atproto==0.0.73     # Bluesky client (CLAUDE.md names atproto as the channel); no stdlib alternative for the AT Protocol
+
+# Tests
+pytest==9.1.1
