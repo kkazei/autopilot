@@ -420,6 +420,43 @@ def test_404_skips_to_next_model_without_retry(run_id):
     assert transport.models == ["a/one:free", "b/two:free"] and sleeps == []
 
 
+def test_404_model_is_not_asked_again_on_later_calls_of_the_same_client(run_id):
+    client, transport, _ = chain((404, "retired"), (200, GOOD), (200, GOOD), (200, GOOD))
+    for _ in range(3):
+        client.chat(run_id, "writer", MSGS)
+    assert transport.models == ["a/one:free", "b/two:free", "b/two:free", "b/two:free"]
+    marks = [e for e in trace.read_run(run_id) if e.summary_out.startswith("dead for the rest of this run")]
+    assert len(marks) == 1 and marks[0].model == "a/one:free" and marks[0].ok is False
+
+
+def test_dead_model_is_skipped_in_the_fallback_message_and_costs_no_budget_later(run_id):
+    client, transport, _ = chain((404, "retired"), (200, GOOD), (200, GOOD))
+    budget = llm.Budget(limit=2)
+    client.chat(run_id, "writer", MSGS, budget=budget)  # 404 + success = 2 attempts
+    assert budget.used == 2
+    fresh = llm.Budget(limit=1)
+    client.chat(run_id, "writer", MSGS, budget=fresh)  # only the live model is asked, so 1 attempt is enough
+    assert fresh.used == 1 and transport.models[-1] == "b/two:free"
+
+
+def test_every_model_dead_raises_unavailable_without_further_requests(run_id):
+    client, transport, _ = chain(*[(404, "gone")] * len(CHAIN))
+    with pytest.raises(llm.LLMUnavailable):
+        client.chat(run_id, "writer", MSGS)
+    with pytest.raises(llm.LLMUnavailable):
+        client.chat(run_id, "writer", MSGS)
+    assert transport.models == CHAIN
+
+
+def test_400_and_truncation_do_not_mark_a_model_dead(run_id):
+    truncated = json.dumps({"choices": [{"message": {"content": "{"}, "finish_reason": "length"}]})
+    client, transport, _ = chain((400, "rejects this request"), (200, GOOD), (200, truncated), (200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    client.chat(run_id, "writer", MSGS)
+    assert transport.models[2] == "a/one:free"  # asked again on the second call
+    assert client._dead == set()
+
+
 @pytest.mark.parametrize("status", [401, 402, 403])
 def test_auth_errors_stop_without_fallback(run_id, status):
     client, transport, _ = chain((status, "nope"))

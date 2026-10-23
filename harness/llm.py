@@ -112,7 +112,7 @@ class LLMResponse:
 class _Failure:
     """One failed attempt. `kind` decides what happens next: retry, skip or stop."""
 
-    kind: str  # "transient" | "skip" | "fatal"
+    kind: str  # "transient" | "skip" | "dead" | "fatal"
     reason: str
 
 
@@ -133,7 +133,9 @@ def classify_status(status: int) -> str:
         return "fatal"
     if status == 429 or status >= 500:
         return "transient"
-    return "skip"  # 404 (dead endpoint), 400 (model rejects the request) and other 4xx: another model may work
+    if status == 404:
+        return "dead"  # a retired endpoint (minimax :free on Oct 22) stays gone, so it is not asked again this run
+    return "skip"  # 400 (model rejects the request) and other 4xx: another model may work, and may accept the next call
 
 
 def parse_completion(model: str, body: str, latency_ms: int) -> LLMResponse | _Failure:
@@ -330,6 +332,9 @@ class OpenRouterLLM(LLM):
         self._jitter = jitter
         self.max_tries = max_tries
         self.timeout_s = timeout_s
+        # Models that answered 404 on this client. A run makes many chat() calls (tool rounds, repair, revisions),
+        # and a retired model at the head of the chain cost one budget slot on every one of them (run_..._c48e24).
+        self._dead: set[str] = set()
 
     def __repr__(self) -> str:
         return f"OpenRouterLLM(models={self.models!r})"  # never the key
@@ -344,6 +349,8 @@ class OpenRouterLLM(LLM):
         summary_in = json.dumps({"messages": messages, "tools": [t["function"]["name"] for t in tools or []]},
                                 ensure_ascii=False)
         for index, model in enumerate(self.models):
+            if model in self._dead:
+                continue
             for attempt in range(1, self.max_tries + 1):
                 if budget is not None and not budget.take():
                     trace.log_event(run_id, agent, "decision", f"{model}: attempt budget",
@@ -362,6 +369,10 @@ class OpenRouterLLM(LLM):
                     trace.log_event(run_id, agent, "decision", f"{model}: {failure.reason}",
                                     "stop: auth or billing error, no fallback", ok=False, model=model)
                     raise LLMAuthError(f"{model}: {failure.reason}")
+                if failure.kind == "dead":
+                    self._dead.add(model)
+                    trace.log_event(run_id, agent, "decision", f"{model}: {failure.reason}",
+                                    "dead for the rest of this run: skipped on later calls", ok=False, model=model)
                 if failure.kind == "transient" and attempt < self.max_tries:
                     delay = self.backoff_s(attempt)
                     trace.log_event(run_id, agent, "decision", f"{model}: {failure.reason}",
@@ -370,7 +381,7 @@ class OpenRouterLLM(LLM):
                     self._sleep(delay)
                     continue
                 break
-            next_model = self.models[index + 1] if index + 1 < len(self.models) else None
+            next_model = next((m for m in self.models[index + 1:] if m not in self._dead), None)
             trace.log_event(run_id, agent, "decision", f"{model} gave up",
                             f"fallback to {next_model}" if next_model else "no models left", ok=False, model=model)
         raise LLMUnavailable(f"all {len(self.models)} models failed")
