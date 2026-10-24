@@ -56,7 +56,7 @@ The point to make: **the critic is a model and can be wrong; the banned-phrase c
 
 ## 5. What is not proven (1 minute, say it plainly)
 
-- **Critic calibration is partial:** 7 of 10 drafts, one model, and the critic was too lenient on two. No rubric fix has been measured yet.
+- **Critic calibration is complete, and the critic is too lenient:** 10 of 10 drafts, one model, 6 of 10 pass/fail agreement; it passed four drafts it should have failed (d03, d06, d08, d10). No rubric fix has been measured yet.
 - **The scheduled GitHub run did not fire** on Oct 24, so unattended running is unproven. It only measures; it cannot publish.
 - **The planner inside the outer loop has not run live.** There is no learning with real engagement for it to use.
 - **The failures above were forced with scripted models.** A real free model has not been made to misbehave in these ways.
