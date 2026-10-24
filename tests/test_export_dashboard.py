@@ -154,10 +154,13 @@ def test_the_overview_says_what_is_partial(data):
         assert fragment in partial
 
 
-def test_a_complete_calibration_report_removes_the_partial_calibration_line(data):
+def test_a_complete_calibration_report_states_the_result(data):
     (data / "calibration").mkdir()
-    (data / "calibration" / "report.md").write_text("done", "utf-8")
-    assert not any("calibration" in p.lower() for p in export.build(data)["overview"]["partial"])
+    (data / "calibration" / "report.md").write_text(
+        "- Agreement: **6 of 10** (60%)\n- Critic passes a draft you would fail (too lenient): 4 (d03, d06, d08, d10)\n", "utf-8")
+    partial = " ".join(export.build(data)["overview"]["partial"])
+    assert "complete" in partial and "6 of 10" in partial and "d03, d06, d08, d10" in partial
+    assert "is partial" not in partial
 
 
 # Secrets ------------------------------------------------------------------------------------------------------------

@@ -144,8 +144,17 @@ def _read_runs(data_dir: Path, tracked: set[Path] | None) -> tuple[list[dict], l
 def _partial(data_dir: Path) -> list[str]:
     """What is not proven yet, kept short and in line with docs/HANDOFF.md. Hand-maintained: update it with the handoff."""
     items = []
-    if not (data_dir / "calibration" / "report.md").exists():
-        report = next(iter(sorted((data_dir / "calibration").glob("report.partial-*.md"))), None)
+    cal = data_dir / "calibration"
+    if (cal / "report.md").exists():
+        text = (cal / "report.md").read_text(encoding="utf-8")
+        agree = re.search(r"Agreement: \*\*(\d+) of (\d+)\*\*", text)
+        lenient = re.search(r"too lenient\): \d+ \(([^)]*)\)", text)
+        if agree:
+            line = f"Critic calibration is complete: the critic agreed with the hand scores on {agree.group(1)} of {agree.group(2)} drafts"
+            line += f" (too lenient on {lenient.group(1)})" if lenient else ""
+            items.append(line + "; no rubric fix has been measured yet.")
+    else:
+        report = next(iter(sorted(cal.glob("report.partial-*.md"))), None)
         m = re.search(r"Drafts: (\d+) in the file, (\d+) scored", report.read_text(encoding="utf-8")) if report else None
         items.append(f"Critic calibration is partial: {m.group(2)} of {m.group(1)} drafts scored." if m
                      else "Critic calibration has not been run.")

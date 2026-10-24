@@ -69,7 +69,7 @@ Run these in a real terminal: the approval prompt needs a keyboard. Models are l
 - The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering) in automated tests, and once more by hand with scripted models.
 
 **Partial or not proven yet**
-- **Critic calibration is partial:** 7 of 10 drafts scored by one model. The critic was too lenient on two drafts, and no rubric fix has been made or re-measured.
+- **Critic calibration is complete, and the critic is too lenient:** all 10 drafts scored by one model, which agreed with the hand scores on 6 of 10 and passed four drafts that should fail (d03, d06, d08, d10). No rubric fix has been made or re-measured.
 - **The scheduled run is unproven:** the 06:17 UTC GitHub run did not fire on Oct 24. It only measures and can never publish.
 - **The planner inside the outer loop has not run live:** only against mocks. There is no learning with real engagement for it to cite yet.
 - **Real-model failure forcing is not done:** the failures were forced with scripted models, so this shows the harness reacts correctly, not that a real free model misbehaves in those ways.
