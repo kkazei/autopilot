@@ -14,7 +14,7 @@ function h(tag, props, ...children) {
     else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
     else node.setAttribute(k, v === true ? "" : v);
   }
-  for (const c of children.flat()) {
+  for (const c of children.flat(Infinity)) {
     if (c === null || c === undefined || c === false) continue;
     node.append(c instanceof Node ? c : document.createTextNode(String(c)));
   }
@@ -71,7 +71,7 @@ function posts() {
       reasons.length ? h("details", null, h("summary", null, "Critic's reasons"),
         h("dl", { class: "reasons" }, reasons.map(([k, v]) => [h("dt", null, k.replace("_", " ")), h("dd", null, v)]))) : null,
       link ? h("p", { class: "small" }, h("a", { href: link, rel: "noopener noreferrer", target: "_blank" }, "View on Bluesky ↗")) : null,
-      h("p", { class: "muted small" }, `post ${p.post_id} · ${p.run_id}`));
+      h("p", { class: "muted small" }, `${p.post_id} · ${p.run_id}`));
   });
 }
 
@@ -86,7 +86,7 @@ function learnings() {
           badge(l.has_signal ? "has signal" : "not enough data", l.has_signal ? "ok" : "warn"),
           h("span", { class: "muted small" }, day(l.saved_at))),
         h("p", null, l.insight),
-        h("p", { class: "muted small" }, `${m.likes ?? 0} likes · ${m.reposts ?? 0} reposts · ${m.replies ?? 0} replies · post ${l.post_id}`));
+        h("p", { class: "muted small" }, `${m.likes ?? 0} likes · ${m.reposts ?? 0} reposts · ${m.replies ?? 0} replies · ${l.post_id}`));
     }),
   ];
 }
