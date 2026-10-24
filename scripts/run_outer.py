@@ -24,6 +24,7 @@ from pydantic import ValidationError
 
 from harness import trace
 from harness.env import load_dotenv
+from harness.hermes_llm import with_runtime
 from harness.llm import LLM, LLMError, OpenRouterLLM
 from harness.publish import Clock, utc_now
 from harness.schemas import BrandBrief
@@ -70,7 +71,7 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         _say(f"refused: brand brief is invalid ({e.error_count()} errors)")
         return EXIT_REFUSED
     try:
-        llm = llm or OpenRouterLLM()
+        llm = with_runtime(llm or OpenRouterLLM())
     except LLMError as e:
         _say(f"refused: {e}")
         return EXIT_REFUSED
