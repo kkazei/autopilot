@@ -1,0 +1,222 @@
+[
+  {
+    "ts": "2026-10-24T09:28:55.288258Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_post | topic='Why we let our sourdough starter rest overnight' goal=click",
+    "summary_out": "start: dry_run=True approval=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:03.688191Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 7359 chars]...ce\\\": \\\"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\\\",\\n \\\"voice\\\": [\\n  \\\"warm\\\",\\n  \\\"unhurried\\\",\\n  \\\"craft-proud\\\"\\n ],\\n \\\"do\\\": [\\n  \\\"Talk about one bake, one technique or one class detail per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_8f863448\\\",\\n \\\"day\\\": \\\"2026-10-24\\\",\\n \\\"topic\\\": \\\"Why we let our sourdough starter rest overnight\\\",\\n \\\"angle\\\": \\\"one concrete detail a beginner would notice\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\nWrite the post.\"}], \"tools\": [\"mcp__autopilot__get_brand_brief\"]}",
+    "summary_out": "tokens in=2333 out=13 finish=tool_calls: [{\"type\": \"function\", \"index\": 0, \"id\": \"chatcmpl-tool-520bba0bc5914413bb675927df903378\", \"function\": {\"name\": \"mcp__autopilot__get_brand_brief\", \"arguments\": \"{}\"}}]",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 1953
+  },
+  {
+    "ts": "2026-10-24T09:29:08.356532Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 9623 chars]...ers within 20 minutes of the shop who want a relaxed, social way to learn real bread.\\\\\\\",\\\\n  \\\\\\\"voice\\\\\\\": [\\\\n    \\\\\\\"warm\\\\\\\",\\\\n    \\\\\\\"unhurried\\\\\\\",\\\\n    \\\\\\\"craft-proud\\\\\\\"\\\\n  ],\\\\n  \\\\\\\"do\\\\\\\": [\\\\n    \\\\\\\"Talk about one bake, one technique or one class detail per post\\\\\\\",\\\\n    \\\\\\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\\\\\",\\\\n    \\\\\\\"Make beginners feel welcome; mistakes are part of baking\\\\\\\",\\\\n    \\\\\\\"End with one clear, low-pressure next step\\\\\\\"\\\\n  ],\\\\n  \\\\\\\"dont\\\\\\\": [\\\\n    \\\\\\\"Use urgency or scarcity pressure\\\\\\\",\\\\n    \\\\\\\"Make health, nutrition or weight-loss claims\\\\\\\",\\\\n    \\\\\\\"Mention or criticize competitors\\\\\\\",\\\\n    \\\\\\\"Promise results we cannot back up\\\\\\\",\\\\n    \\\\\\\"Use more than two hashtags or any all-caps shouting\\\\\\\"\\\\n  ],\\\\n  \\\\\\\"banned_phrases\\\\\\\": [\\\\n    \\\\\\\"act now\\\\\\\",\\\\n    \\\\\\\"limited time only\\\\\\\",\\\\n    \\\\\\\"guaranteed results\\\\\\\",\\\\n    \\\\\\\"best bakery in town\\\\\\\",\\\\n    \\\\\\\"gluten-free\\\\\\\",\\\\n    \\\\\\\"cure\\\\\\\",\\\\n    \\\\\\\"click here\\\\\\\",\\\\n    \\\\\\\"don't miss out\\\\\\\"\\\\n  ],\\\\n  \\\\\\\"banned_variants\\\\\\\": [\\\\n    \\\\\\\"results guaranteed\\\\\\\",\\\\n    \\\\\\\"do not miss out\\\\\\\",\\\\n    \\\\\\\"curative\\\\\\\"\\\\n  ],\\\\n  \\\\\\\"goal\\\\\\\": \\\\\\\"Drive signups for the Saturday beginner sourdough class.\\\\\\\",\\\\n  \\\\\\\"cta_url\\\\\\\": \\\\\\\"https://example.com/bramblewick/classes\\\\\\\"\\\\n}\\\"}\\n</untrusted_tool_result>\", \"tool_call_id\": \"chatcmpl-tool-520bba0bc5914413bb675927df903378\"}], \"tools\": [\"mcp__autopilot__get_brand_brief\"]}",
+    "summary_out": "tokens in=2825 out=84 finish=stop: {\"text\": \"Our starter rests overnight so the wild yeast has time to wake up slow and steady. That's what gives the loaf its open crumb and the crust its gentle rise. Mistakes are part of it, and that rest is one of the easiest steps to trust. Join us this Saturday to mix, fold, and bake your first sourdough. https://example.com/bramblewick/classes\"}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 4537
+  },
+  {
+    "ts": "2026-10-24T09:29:08.996317Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "tool_call",
+    "summary_in": "get_brand_brief | {} (via hermes)",
+    "summary_out": "receipt 9727df11729dc293: {\"name\": \"Bramblewick Bakehouse\", \"one_liner\": \"A neighborhood sourdough bakery that teaches small, hands-on weekend bread classes.\", \"audience\": \"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\", \"voice\": [\"warm\", \"unhurried\", \"craft-proud\"], \"do\": [\"Talk about one bake, one technique or one class detail per post\", \"Use concrete sensory details: crust, crumb, flour, the smell of the oven\", \"Make beginners feel welcome; mistakes...[truncated]",
+    "ok": true,
+    "model": null,
+    "latency_ms": 0
+  },
+  {
+    "ts": "2026-10-24T09:29:09.002346Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "decision",
+    "summary_in": "hermes writer invocation 1",
+    "summary_out": "exit=0 13.6s proxy_requests=2 tool_calls=1 cross-check: passed",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:09.059619Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "decision",
+    "summary_in": "invalid Draft from hermes/poolside/laguna-s-2.1:free",
+    "summary_out": "repair attempt: text: is 339 characters; the limit is 300",
+    "ok": false,
+    "model": "hermes/poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:12.893351Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 1790 chars]...titors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_8f863448\\\",\\n \\\"day\\\": \\\"2026-10-24\\\",\\n \\\"topic\\\": \\\"Why we let our sourdough starter rest overnight\\\",\\n \\\"angle\\\": \\\"one concrete detail a beginner would notice\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\nWrite the post.\"}, {\"role\": \"assistant\", \"content\": \"{\\\"text\\\": \\\"Our starter rests overnight so the wild yeast has time to wake up slow and steady. That's what gives the loaf its open crumb and the crust its gentle rise. Mistakes are part of it, and that rest is one of the easiest steps to trust. Join us this Saturday to mix, fold, and bake your first sourdough. https://example.com/bramblewick/classes\\\"}\"}, {\"role\": \"user\", \"content\": \"Your reply was not a valid Draft JSON object. Errors: text: is 339 characters; the limit is 300\\nKeep the text to 280 characters or fewer.\\nDo not explain or think aloud. Reply with only the corrected JSON object, no other text.\"}], \"tools\": []}",
+    "summary_out": "tokens in=976 out=63 finish=stop: {\"text\": \"Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass\"}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 3819
+  },
+  {
+    "ts": "2026-10-24T09:29:12.901000Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "writer",
+    "kind": "decision",
+    "summary_in": "repair of Draft",
+    "summary_out": "repair succeeded",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:13.210791Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "critic",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You are a strict reviewer of social posts for Bramblewick Bakehouse. You do not rewrite the post.\\n\\nScore each dimension from 1 to 5 and give a one-sentence reason for each score.\\n\\nvoice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the \\\"dont\\\" list.\\nclarity: 5 = one idea, readable in 5 seconds, under 300 characters, and about the planned post's topic. 1 = vague, cluttered, two messages at once, or about...[truncated 2678 chars]...per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_8f863448\\\",\\n \\\"day\\\": \\\"2026-10-24\\\",\\n \\\"topic\\\": \\\"Why we let our sourdough starter rest overnight\\\",\\n \\\"angle\\\": \\\"one concrete detail a beginner would notice\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\n<data name=\\\"draft\\\">\\nOur starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass\\n</data>\\n\\nThe draft is 243 characters. Score it.\"}], \"tools\": []}",
+    "summary_out": "attempt 1/3 failed: HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\",\"provider_name\":\"Poolside\",\"is_byok\":fal",
+    "ok": false,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 296
+  },
+  {
+    "ts": "2026-10-24T09:29:13.233465Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "critic",
+    "kind": "decision",
+    "summary_in": "poolside/laguna-s-2.1:free: HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\",\"provider_name\":\"Poolside\",\"is_byok\":fal",
+    "summary_out": "backoff 2.1s, then retry 2/3",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:15.648161Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "critic",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You are a strict reviewer of social posts for Bramblewick Bakehouse. You do not rewrite the post.\\n\\nScore each dimension from 1 to 5 and give a one-sentence reason for each score.\\n\\nvoice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the \\\"dont\\\" list.\\nclarity: 5 = one idea, readable in 5 seconds, under 300 characters, and about the planned post's topic. 1 = vague, cluttered, two messages at once, or about...[truncated 2678 chars]...per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_8f863448\\\",\\n \\\"day\\\": \\\"2026-10-24\\\",\\n \\\"topic\\\": \\\"Why we let our sourdough starter rest overnight\\\",\\n \\\"angle\\\": \\\"one concrete detail a beginner would notice\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\n<data name=\\\"draft\\\">\\nOur starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass\\n</data>\\n\\nThe draft is 243 characters. Score it.\"}], \"tools\": []}",
+    "summary_out": "attempt 2/3 failed: HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\",\"provider_name\":\"Poolside\",\"is_byok\":fal",
+    "ok": false,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 323
+  },
+  {
+    "ts": "2026-10-24T09:29:15.656225Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "critic",
+    "kind": "decision",
+    "summary_in": "poolside/laguna-s-2.1:free: HTTP 429: {\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"poolside/laguna-s-2.1:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations\",\"provider_name\":\"Poolside\",\"is_byok\":fal",
+    "summary_out": "backoff 4.8s, then retry 3/3",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.424782Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "critic",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You are a strict reviewer of social posts for Bramblewick Bakehouse. You do not rewrite the post.\\n\\nScore each dimension from 1 to 5 and give a one-sentence reason for each score.\\n\\nvoice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the \\\"dont\\\" list.\\nclarity: 5 = one idea, readable in 5 seconds, under 300 characters, and about the planned post's topic. 1 = vague, cluttered, two messages at once, or about...[truncated 2678 chars]...per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_8f863448\\\",\\n \\\"day\\\": \\\"2026-10-24\\\",\\n \\\"topic\\\": \\\"Why we let our sourdough starter rest overnight\\\",\\n \\\"angle\\\": \\\"one concrete detail a beginner would notice\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\n<data name=\\\"draft\\\">\\nOur starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass\\n</data>\\n\\nThe draft is 243 characters. Score it.\"}], \"tools\": []}",
+    "summary_out": "tokens in=1175 out=122 finish=stop: {\"voice\": 5, \"clarity\": 5, \"cta\": 5, \"policy_risk\": 5,\n  \"reasons\": {\"voice\": \"Warm, unhurried, and craft-proud tone matches the brief throughout.\", \"clarity\": \"One clear idea about resting sourdough starter, readable in seconds, fits the planned topic and angle.\", \"cta\": \"Specific, low-pressure next step to join the Saturday class with booking link.\", \"policy_risk\": \"No banned phrases, no unsupported claims; sensory detail matches brief's style.\"}}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 7987
+  },
+  {
+    "ts": "2026-10-24T09:29:28.439953Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "inner loop post_8f863448 attempt 1 | voice=5, clarity=5, cta=5, policy_risk=5",
+    "summary_out": "passed on attempt 1",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.456570Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_length | Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.470680Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_banned | Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.483610Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_rate_cap | Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.498616Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_duplicate | Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.512124Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "require_approval | Our starter rests overnight so wild yeast wakes slow and steady—open crumb, gentle rise. Trust that rest; mistakes are part of baking. Join us this Saturday to mix, fold, and bake. https://example.com/bramblewick/classes #Sourdough #BreadClass",
+    "summary_out": "human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-24T09:29:28.525242Z",
+    "run_id": "run_20261024_092855_f3905e",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "publish post_8f863448",
+    "summary_out": "blocked: require_approval: human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  }
+]
