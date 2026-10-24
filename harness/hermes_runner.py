@@ -30,10 +30,13 @@ SERVER_KEY = "autopilot"
 TOOL_PREFIX = f"mcp__{SERVER_KEY}__"
 HERMES_ENV = "AUTOPILOT_HERMES_BIN"
 DEFAULT_TIMEOUT_S = 180.0
+KILL_WAIT_S = 5.0  # how long to wait for the pipes after a kill before giving up on them
 DEFAULT_MAX_TURNS = 6
 MIN_CONTEXT = 65536
 # Provider keys come in many shapes (OPENAI_API_KEY, AWS_ACCESS_KEY_ID, FOO_KEY). A bare "KEY" would also strip
 # GIT_CONFIG_KEY_0, which git needs to keep paired with its value.
+_PROXY_VAR = re.compile(r"^(HTTP|HTTPS|ALL|FTP)_PROXY$", re.I)
+_LOOPBACK = "127.0.0.1,localhost,::1"
 _SECRETISH = re.compile(r"API_KEY|ACCESS_KEY|_KEY$|TOKEN|SECRET|PASSWORD|CREDENTIAL", re.I)
 
 
@@ -102,8 +105,9 @@ def build_config(spec: HermesSpec) -> dict[str, Any]:
 
 def child_env(home: Path, extra: dict[str, str] | None = None) -> dict[str, str]:
     """No inherited secrets: a stray OPENROUTER_API_KEY would let Hermes bypass the proxy."""
-    env = {k: v for k, v in os.environ.items() if not _SECRETISH.search(k)}
-    env.update({"HERMES_HOME": str(home), "PYTHONIOENCODING": "utf-8"})
+    env = {k: v for k, v in os.environ.items() if not _SECRETISH.search(k) and not _PROXY_VAR.match(k)}
+    # A proxy variable would send Hermes's requests to the harness proxy (and its bearer token) through someone else's.
+    env.update({"HERMES_HOME": str(home), "PYTHONIOENCODING": "utf-8", "NO_PROXY": _LOOPBACK, "no_proxy": _LOOPBACK})
     env.update(extra or {})
     return env
 
@@ -154,14 +158,20 @@ def run_hermes(spec: HermesSpec, *, keep_dir: Path | None = None) -> HermesResul
         kwargs: dict[str, Any] = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
                                   else {"start_new_session": True})
         started = time.monotonic()
-        proc = subprocess.Popen(build_command(spec, query), cwd=home, env=child_env(home, spec.extra_env),
-                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True, encoding="utf-8", errors="replace", **kwargs)
+        try:
+            proc = subprocess.Popen(build_command(spec, query), cwd=home, env=child_env(home, spec.extra_env),
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, encoding="utf-8", errors="replace", **kwargs)
+        except OSError as e:  # not executable, a bad shim, access denied: the caller falls back like for a timeout
+            raise HermesRunError("launch_failed", type(e).__name__) from None
         try:
             stdout, stderr = proc.communicate(timeout=spec.timeout_s)
         except subprocess.TimeoutExpired:
             kill_tree(proc)
-            proc.communicate()
+            try:
+                proc.communicate(timeout=KILL_WAIT_S)
+            except subprocess.TimeoutExpired:
+                pass  # a straggler outside the killed tree still holds a pipe; do not wait for it forever
             raise HermesRunError("timeout", f"no answer within {spec.timeout_s:.0f}s; process tree killed") from None
         events = parse_events(stdout)
         return HermesResult(proc.returncode, _final_text(events), stdout, stderr, events,

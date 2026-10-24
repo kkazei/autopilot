@@ -50,6 +50,11 @@ def cross_check(*, allowed_tools: Sequence[str], result: HermesResult, records: 
     if refused:
         findings.append(Finding("proxy_refused", "; ".join(f"{r.status}: {r.reason}" for r in refused)))
 
+    last_reply = next((r for r in reversed(records) if r.status == 200), None)
+    # Contained, not equal: Hermes may strip a reasoning block or whitespace, but it cannot invent a post.
+    if result.final_text is not None and last_reply is not None and result.final_text.strip() not in last_reply.reply:
+        findings.append(Finding("final_text_mismatch", "hermes's final text is not in the last model reply"))
+
     offered = {name for r in records for name in r.tools}
     streamed = _names(result.events, "tool_use")
     asked = [name for r in records for name in r.called]

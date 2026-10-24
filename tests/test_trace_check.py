@@ -19,8 +19,9 @@ def result(*, exit_code=0, text="{}", events=None, stdout="", stderr="") -> Herm
     return HermesResult(exit_code, text, stdout, stderr, tuple(stream))
 
 
-def records(*, called=(BRIEF,), tools=(BRIEF,), status=200):
-    return [ProxyRecord(tuple(tools), status, "m:free", called=tuple(called)), ProxyRecord(tuple(tools), 200, "m:free")]
+def records(*, called=(BRIEF,), tools=(BRIEF,), status=200, reply="{}"):
+    return [ProxyRecord(tuple(tools), status, "m:free", called=tuple(called)),
+            ProxyRecord(tuple(tools), 200, "m:free", reply=reply)]
 
 
 def mcp(*names):
@@ -110,3 +111,17 @@ def test_executed_calls_are_copied_into_the_run_trace(data):
     event = trace.read_run(run_id)[0]
     assert (event.kind, event.agent, event.ok) == ("tool_call", "writer", True)
     assert "get_brand_brief" in event.summary_in and "via hermes" in event.summary_in and "r0" in event.summary_out
+
+
+def test_final_text_that_no_model_produced_is_a_finding():
+    assert "final_text_mismatch" in codes(result=result(text="a post nobody wrote"), records=records(reply='{"text": "x"}'))
+
+
+@pytest.mark.parametrize("final", ['{"text": "x"}', '  {"text": "x"}\n'])
+def test_final_text_matching_the_last_reply_passes_even_with_whitespace_differences(final):
+    assert codes(result=result(text=final), records=records(reply='{"text": "x"}\n')) == []
+
+
+def test_hermes_may_strip_reasoning_from_the_reply_it_reports():
+    reply = '<think>let me see</think>{"text": "x"}'
+    assert codes(result=result(text='{"text": "x"}'), records=records(reply=reply)) == []

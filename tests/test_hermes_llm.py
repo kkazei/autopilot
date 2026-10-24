@@ -7,6 +7,7 @@ MCP server would write. Everything between those two is the production code.
 from __future__ import annotations
 
 import json
+import urllib.error
 import urllib.request
 from datetime import date
 
@@ -209,3 +210,60 @@ def test_hermes_runtime_wraps_the_client():
 def test_an_unknown_runtime_is_refused_not_ignored():
     with pytest.raises(LLMConfigError):
         with_runtime(MockLLM([]), {hermes_llm.RUNTIME_ENV: "hermers"})
+
+
+def test_an_oserror_from_the_runner_falls_back_instead_of_crashing_the_writer(data):
+    def runner(spec):
+        raise PermissionError("WinError 5: access denied")
+
+    llm = HermesWriterLLM(script(GOOD), runner=runner)
+    run_id = trace.start_run()
+    assert llm.chat(run_id, "writer", MESSAGES, SPECS).content == GOOD and llm.fallbacks == 1
+    assert "PermissionError" in " ".join(decisions(run_id))
+
+
+def test_tool_calls_that_ran_before_a_timeout_are_still_in_the_trace(data):
+    def runner(spec):
+        append_jsonl(spec.call_log, {"role": "writer", "tool": "get_brand_brief", "args": "{}", "ok": True,
+                                     "receipt": "beef01", "result": "{}", "latency_ms": 1})
+        raise HermesRunError("timeout", "no answer within 180s")
+
+    llm = HermesWriterLLM(script(GOOD), runner=runner)
+    run_id = trace.start_run()
+    llm.chat(run_id, "writer", MESSAGES, SPECS)
+    tool = [e for e in trace.read_run(run_id) if e.kind == "tool_call"]
+    assert len(tool) == 1 and "beef01" in tool[0].summary_out
+
+
+def test_text_that_no_model_produced_makes_the_run_untrusted(data):
+    def rewriting(spec: HermesSpec) -> HermesResult:
+        real = hermes_like()(spec)
+        return HermesResult(0, '{"text": "rewritten by hermes"}', "", "", real.events)
+
+    direct = script(LLMResponse(model="m:free", content=None, tool_calls=[TOOL_CALL]), GOOD, GOOD)
+    llm = HermesWriterLLM(direct, runner=rewriting)
+    run_id = trace.start_run()
+    assert llm.chat(run_id, "writer", MESSAGES, SPECS).content == GOOD and llm.fallbacks == 1
+    assert "final_text_mismatch" in " ".join(decisions(run_id))
+
+
+@pytest.mark.parametrize("offered", ["terminal", f"{TOOL_PREFIX}publish_post", f"{TOOL_PREFIX}save_learning"])
+def test_the_proxy_the_adapter_builds_refuses_tools_outside_the_writers_allowlist(data, offered):
+    refused: list[int] = []
+
+    def greedy(spec: HermesSpec) -> HermesResult:
+        request = urllib.request.Request(
+            spec.base_url + "/chat/completions", method="POST",
+            data=json.dumps({"messages": [{"role": "user", "content": "hi"}],
+                             "tools": [{"type": "function", "function": {"name": offered}}]}).encode(),
+            headers={"Authorization": f"Bearer {spec.proxy_token}", "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(request, timeout=10)
+        except urllib.error.HTTPError as e:
+            refused.append(e.code)
+        return HermesResult(1, None, "", "", ())
+
+    direct = script(GOOD)
+    llm = HermesWriterLLM(direct, runner=greedy)
+    assert llm.chat(trace.start_run(), "writer", MESSAGES, SPECS).content == GOOD
+    assert refused == [403] and len(direct.calls) == 1 and llm.fallbacks == 1  # only the fallback reached a model

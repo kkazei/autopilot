@@ -5,7 +5,10 @@ Everything runs against MockLLM over loopback, so no test here can spend quota.
 
 from __future__ import annotations
 
+import http.client
 import json
+import threading
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -36,7 +39,8 @@ def post(proxy: LLMProxy, body: dict[str, Any], *, token: str | None = None, pat
 
 def make(data, script, **kwargs) -> tuple[LLMProxy, MockLLM]:
     llm = MockLLM(script)
-    return LLMProxy(llm, trace.start_run(), "writer", **{"max_requests": 8, **kwargs}), llm
+    defaults = {"max_requests": 8, "allowed_tools": ("get_brand_brief",)}
+    return LLMProxy(llm, trace.start_run(), "writer", **{**defaults, **kwargs}), llm
 
 
 def events(proxy: LLMProxy) -> list:
@@ -168,3 +172,72 @@ def test_an_oversized_body_is_refused_before_it_is_read_or_forwarded(data):
     with proxy:
         status, _ = post(proxy, padded)
     assert status == 400 and llm.calls == []
+
+
+@pytest.mark.parametrize("offered", [
+    ["terminal"],  # a Hermes built-in that must never reach the model
+    ["mcp__autopilot__get_brand_brief", "mcp__autopilot__publish_post"],  # one good name does not excuse a bad one
+    ["mcp__autopilot__get_brand_brief_extra"],  # a lookalike, not a prefix match
+    ["get_brand_brief"],  # the bare name is not what Hermes sends for an MCP tool
+])
+def test_a_tool_outside_the_roles_allowlist_is_refused_before_any_upstream_call(data, offered):
+    proxy, llm = make(data, ["x"])
+    tools = [{"type": "function", "function": {"name": n}} for n in offered]
+    with proxy:
+        status, body = post(proxy, {"messages": MESSAGES, "tools": tools})
+    assert status == 403 and "not allowed" in body["error"]["message"] and llm.calls == []
+    assert proxy.records[0].status == 403
+
+
+def test_a_role_with_no_tools_is_refused_any_tool_at_all(data):
+    proxy, llm = make(data, ["x"], allowed_tools=())
+    with proxy:
+        status, _ = post(proxy, {"messages": MESSAGES, "tools": [TOOL]})
+        ok, _ = post(proxy, {"messages": MESSAGES})
+    assert (status, ok) == (403, 200) and len(llm.calls) == 1
+
+
+def test_a_non_ascii_authorization_header_is_a_401_not_a_dead_handler(data):
+    proxy, llm = make(data, ["x"])
+    with proxy:
+        host, port = proxy.base_url.split("//")[1].split("/")[0].split(":")
+        conn = http.client.HTTPConnection(host, int(port), timeout=5)
+        conn.putrequest("POST", "/v1/chat/completions")
+        conn.putheader("Authorization", "Bearer café")
+        conn.putheader("Content-Length", "2")
+        conn.endheaders(b"{}")
+        assert conn.getresponse().status == 401
+    assert llm.calls == []
+
+
+class SlowLLM(MockLLM):
+    """Answers only after a delay, like a free model stuck in backoff when Hermes is killed."""
+
+    def chat(self, *args, **kwargs):
+        time.sleep(1.0)
+        return super().chat(*args, **kwargs)
+
+
+def test_a_request_in_flight_when_the_proxy_stops_cannot_spend_the_budget_afterwards(data):
+    budget = Budget(5)
+    llm = SlowLLM(["late"])
+    proxy = LLMProxy(llm, trace.start_run(), "writer", max_requests=8, allowed_tools=("get_brand_brief",),
+                     upstream=budget)
+    proxy.start()
+    late = threading.Thread(target=lambda: post(proxy, {"messages": MESSAGES}), daemon=True)
+    late.start()
+    time.sleep(0.3)  # the handler is now inside the slow upstream call
+    proxy.stop()
+    late.join(10)
+    time.sleep(0.2)
+    assert budget.used == 0 and llm.calls == [], "a handler kept spending after stop()"
+
+
+def test_a_stopped_proxy_refuses_late_requests_without_charging_anything(data):
+    budget = Budget(5)
+    proxy, llm = make(data, ["x"], upstream=budget)
+    proxy.start()
+    proxy.stop()
+    status, body = proxy.handle_chat({"messages": MESSAGES})
+    assert status == 403 and body["error"]["message"] == "proxy is closed"  # named, so the trace says why
+    assert budget.used == 0 and llm.calls == []

@@ -22,6 +22,7 @@ from types import TracebackType
 from typing import Any
 
 from harness import trace
+from harness.hermes_runner import TOOL_PREFIX
 from harness.llm import DEFAULT_MAX_TOKENS, LLM, Budget, LLMError, LLMResponse
 from harness.trace import Agent
 
@@ -40,6 +41,7 @@ class ProxyRecord:
     model: str | None = None
     reason: str = ""
     called: tuple[str, ...] = ()  # tool names the model asked for in this reply, for the cross-check
+    reply: str = ""  # the text the model returned, so Hermes's final answer can be tied back to a real model reply
 
 
 @dataclass
@@ -50,12 +52,22 @@ class LLMProxy:
     run_id: str
     role: Agent
     max_requests: int
+    # Bare tool names the role may be offered. Required, so a caller cannot forget it: the proxy refuses any other
+    # tool before the model sees it, instead of leaving the cross-check to notice after the call has run.
+    allowed_tools: tuple[str, ...]
     upstream: Budget | None = None
     # A per-run bearer token, so another local process that finds the port cannot spend this run's quota.
     token: str = field(default_factory=lambda: secrets.token_urlsafe(24))
     records: list[ProxyRecord] = field(default_factory=list)
     _server: ThreadingHTTPServer | None = field(default=None, init=False, repr=False)
+    _closed: bool = field(default=False, init=False, repr=False)
+    _gate: Budget = field(init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        # Every upstream attempt is charged through this child of the run's budget. stop() empties it, which is how
+        # a handler still inside LLM.chat when Hermes is killed is kept from taking one more attempt.
+        self._gate = Budget(10**9, parent=self.upstream)
 
     @property
     def base_url(self) -> str:
@@ -87,7 +99,9 @@ class LLMProxy:
                 self.wfile.write(payload)
 
             def _authorized(self) -> bool:
-                return secrets.compare_digest(self.headers.get("Authorization", ""), f"Bearer {proxy.token}")
+                # Bytes, because compare_digest raises on a non-ASCII str and a dead handler thread resets the client.
+                sent = self.headers.get("Authorization", "").encode("utf-8", "replace")
+                return secrets.compare_digest(sent, f"Bearer {proxy.token}".encode())
 
             def do_GET(self) -> None:
                 # Hermes probes /v1/models for context sizes; an empty list is a valid answer and costs nothing.
@@ -139,6 +153,11 @@ class LLMProxy:
         threading.Thread(target=self._server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
 
     def stop(self) -> None:
+        """Close for good. A handler already inside LLM.chat cannot be interrupted, but it can be stopped from taking
+        another attempt or answering a new request, so a killed Hermes run cannot go on spending the shared budget
+        while the fallback runs."""
+        self._closed = True
+        self._gate.limit = 0
         if self._server is not None:
             self._server.shutdown()
             self._server.server_close()
@@ -150,23 +169,30 @@ class LLMProxy:
         names = tuple(sorted(_tool_name(t) for t in tools or []))
         messages = body.get("messages")
         with self._lock:
-            refusal = self._refusal(body, messages)
+            refusal = self._refusal(body, messages, names)
             if refusal is not None:
                 return self._refuse(names, *refusal)
             try:
                 response = self.llm.chat(self.run_id, self.role, messages, tools or None,
-                                         max_tokens=DEFAULT_MAX_TOKENS, budget=self.upstream)
+                                         max_tokens=DEFAULT_MAX_TOKENS, budget=self._gate)
             except LLMError as e:
                 return self._refuse(names, 403, f"{type(e).__name__}: {e}")
             except Exception as e:  # noqa: BLE001 - fail closed: a trace write error must not become a retry
                 return self._refuse(names, 403, f"proxy error: {type(e).__name__}")
             self.records.append(ProxyRecord(names, 200, response.model,
-                                            called=tuple(_call_name(c) for c in response.tool_calls)))
+                                            called=tuple(_call_name(c) for c in response.tool_calls),
+                                            reply=response.content or ""))
             return 200, _completion(response)
 
-    def _refusal(self, body: dict[str, Any], messages: Any) -> tuple[int, str] | None:
+    def _refusal(self, body: dict[str, Any], messages: Any, offered: tuple[str, ...]) -> tuple[int, str] | None:
         """(status, reason) for a request to turn away before any upstream call. 400 is the caller's mistake and
         403 is our limit; both are non-retryable for Hermes."""
+        if self._closed:
+            return 403, "proxy is closed"
+        allowed = {f"{TOOL_PREFIX}{t}" for t in self.allowed_tools}
+        outside = [n for n in offered if n not in allowed]
+        if outside:
+            return 403, f"tool not allowed for the {self.role} role: {outside}"  # rule 7, before the model sees it
         if body.get("stream"):
             return 400, "stream: true is not supported"  # the harness reads whole replies; Hermes is set not to stream
         if not isinstance(messages, list) or not messages:

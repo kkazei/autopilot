@@ -51,10 +51,11 @@ class HermesWriterLLM(LLM):
             return self.direct.chat(run_id, agent, messages, tools, max_tokens=max_tokens, budget=budget)
         try:
             return self._via_hermes(run_id, agent, messages, budget)
-        except HermesRunError as e:
+        except (HermesRunError, OSError) as e:  # OSError: the proxy could not bind, a temp dir could not be made
             self.fallbacks += 1
+            code = e.code if isinstance(e, HermesRunError) else type(e).__name__
             trace.log_event(run_id, agent, "decision", "hermes writer run not trusted",
-                            f"{e.code}: {e}; falling back to the direct chain for this call", ok=False)
+                            f"{code}: {e}; falling back to the direct chain for this call", ok=False)
             return self.direct.chat(run_id, agent, messages, tools, max_tokens=max_tokens, budget=budget)
 
     def _via_hermes(self, run_id: str, agent: Agent, messages: list[Message], budget: Budget | None) -> LLMResponse:
@@ -63,14 +64,19 @@ class HermesWriterLLM(LLM):
         upstream = budget if budget is not None else Budget(ROLE_BUDGETS[agent])
         self.invocations += 1
         with tempfile.TemporaryDirectory(prefix="autopilot_calls_") as scratch, \
-                LLMProxy(self.direct, run_id, agent, max_requests=HERMES_REQUESTS[agent], upstream=upstream) as proxy:
+                LLMProxy(self.direct, run_id, agent, max_requests=HERMES_REQUESTS[agent], allowed_tools=allowed,
+                          upstream=upstream) as proxy:
             call_log = Path(scratch) / "calls.jsonl"
             spec = HermesSpec(role=agent, system_prompt=system, user_prompt=user, base_url=proxy.base_url,
                               proxy_token=proxy.token, tools=allowed, data_dir=trace.data_dir(), call_log=call_log,
                               **({"timeout_s": self._timeout_s} if self._timeout_s else {}))
-            result = self._runner(spec)
-            mcp_calls, unreadable = read_jsonl(call_log) if call_log.exists() else ([], [])
-            ingest_tool_calls(run_id, agent, mcp_calls)
+            try:
+                result = self._runner(spec)
+            finally:
+                # The tools ran in another process whatever happened to Hermes, so their calls reach the trace
+                # even when the run timed out (rule 3).
+                mcp_calls, unreadable = read_jsonl(call_log) if call_log.exists() else ([], [])
+                ingest_tool_calls(run_id, agent, mcp_calls)
             findings = cross_check(allowed_tools=allowed, result=result, records=proxy.records, mcp_calls=mcp_calls,
                                    secrets=[proxy.token, os.environ.get(KEY_ENV, "")])
             ok_records = [r for r in proxy.records if r.status == 200]

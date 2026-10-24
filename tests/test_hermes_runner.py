@@ -160,3 +160,29 @@ def test_keep_dir_preserves_the_workdir_for_debugging(tmp_path, monkeypatch):
     fake_hermes(tmp_path, monkeypatch, 'print(\'{"type": "result", "exit_code": 0, "text": "ok"}\')')
     hr.run_hermes(make_spec(tmp_path), keep_dir=tmp_path / "kept")
     assert (tmp_path / "kept" / "home" / "config.yaml").exists()
+
+
+def test_a_proxy_in_the_environment_cannot_carry_loopback_traffic_off_the_machine(tmp_path, monkeypatch):
+    for name in ("HTTP_PROXY", "https_proxy", "ALL_PROXY"):
+        monkeypatch.setenv(name, "http://proxy.example:3128")
+    env = hr.child_env(tmp_path / "home")
+    assert not [k for k in env if k.upper() in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY")]
+    assert "127.0.0.1" in env["NO_PROXY"] and "localhost" in env["NO_PROXY"]
+
+
+def test_a_straggler_holding_the_pipes_cannot_hang_the_wait_after_a_kill(tmp_path, monkeypatch):
+    # The kill is neutered, so the child keeps stdout open past the timeout, like a grandchild that escaped the tree.
+    monkeypatch.setattr(hr, "kill_tree", lambda proc: None)
+    monkeypatch.setattr(hr, "KILL_WAIT_S", 1.0)
+    fake_hermes(tmp_path, monkeypatch, "import time; time.sleep(8)")
+    started = time.monotonic()
+    with pytest.raises(hr.HermesRunError) as e:
+        hr.run_hermes(make_spec(tmp_path, timeout_s=1))
+    assert e.value.code == "timeout" and time.monotonic() - started < 6
+
+
+def test_a_binary_that_cannot_be_launched_is_a_named_error_not_a_crash(tmp_path, monkeypatch):
+    monkeypatch.setattr(hr, "build_command", lambda spec, query_file: [str(tmp_path / "no_such_hermes.exe")])
+    with pytest.raises(hr.HermesRunError) as e:
+        hr.run_hermes(make_spec(tmp_path))
+    assert e.value.code == "launch_failed"
