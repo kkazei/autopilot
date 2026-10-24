@@ -16,7 +16,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 ## 2. Where we are (one-screen summary)
 - **Status: Day 1 complete; Day 2 is code-complete and partly proven live, with evidence still outstanding.**
   - **Proven for real:** 2 live posts; the measure-only outer loop against the live account (2 learnings saved, no model call); the GitHub deploy workflow (one manual run succeeded); CI on every PR; and a partial real run of the critic calibration (7 of 10 drafts).
-  - **Not yet proven live:** the planner and the writer/critic inside `run_outer`, a complete calibration run, more posts, the scheduled (06:17 UTC) run, and the by-hand failure forcing.
+  - **Not yet proven live:** the planner and the writer/critic inside `run_outer`, a complete calibration run, more posts, the scheduled (06:17 UTC) run (did not fire Oct 24), and the by-hand failure forcing.
 - **Day:** Day 2 is Fri Oct 23 (now about 11:45 UTC). The schedule runs Oct 22-24.
 - **Live posts so far (2):**
   - `run_20261022_092913_bde119` (Oct 22, 09:29 UTC), `at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myhe2q5j432a`.
@@ -220,12 +220,13 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 **Block 3: failure-handling tests (D2-C, tests 1-7 verbatim)**
 - [x] Revision cap, JSON repair, rate cap, banned phrase, 429 fallback, publish ordering, prompt injection (`evals/test_failure_handling.py`, each driven through a whole `run_post` and checked in the trace or call log)
 - [ ] Force each failure once by hand against the real system and confirm it in the trace (the tests use mocks; this step is not done)
+  - D2-C forced by hand offline with scripted models (MockLLM; case 6 used the real OpenRouterLLM with a fake HTTP transport); the real harness, guardrails, trace and dry-run publish path ran. Real-model forcing is NOT done.
 
 **Block 4: deploy (D2-D)**
 - [x] `.github/workflows/run.yml` (cron 06:17 UTC assumed, `workflow_dispatch` with `dry_run`, Python 3.11, concurrency group, 20-minute timeout, commits `data/`); the schedule is measure-only (decision 4.11). One manual run green on Oct 23; the scheduled run is not yet seen
 - [x] Separate CI workflow running pytest on every push and PR: `ci.yml`, green (414 tests, Ubuntu, Python 3.11)
 - [x] `docs/DEPLOY.md` written; merged to `master`, four repository secrets added, one manual run done
-- [ ] First scheduled run completes unattended (06:17 UTC, Oct 24): check the Actions tab in the morning
+- [ ] **Scheduled run: unproven.** It did not fire on Oct 24: at 08:33 UTC `gh run list --workflow run.yml` showed no `schedule` run, only the two Oct 23 manual runs. The cron is on `master`. Cause not diagnosed (GitHub does not guarantee scheduled runs). Not triggered by hand. Check again after 06:17 UTC on Oct 25.
 - Node 20 warning: fixed in PR #5 (open). `checkout` and `setup-python` are bumped to v7, which run on Node 24; CI is green, the Node 20 annotation is gone, and the data-push step was tested by dispatching `run.yml` from the PR branch (green, the bot's push worked). One leftover notice, the `ubuntu-latest` migration to Ubuntu 26, did not affect any run. A CI run with 0 jobs on that branch came from the bot's push, not from the code (ISSUES_LOG 9.11).
 - [ ] Trace page deployed (Cloudflare Pages or Vercel)
 
@@ -234,7 +235,7 @@ Goal: the cron runs unattended, and the second run's plan reflects the first run
 
 **End-of-day checks**
 - [ ] The second run's plan cites a learning from the first (may need real engagement; see Known gaps)
-- [ ] A scheduled run completed unattended (a manual run did; the scheduled one is Oct 24, 06:17 UTC)
+- [ ] **Scheduled run: unproven.** It did not fire on Oct 24: at 08:33 UTC `gh run list --workflow run.yml` showed no `schedule` run, only the two Oct 23 manual runs. The cron is on `master`. Cause not diagnosed (GitHub does not guarantee scheduled runs). Not triggered by hand. Check again after 06:17 UTC on Oct 25.
 - [x] Tests pass locally and in GitHub Actions (414)
 
 ### Day 3 (Sat Oct 24): polish, record, rehearse
