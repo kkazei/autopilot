@@ -52,6 +52,15 @@ Equivalent CLI: `gh workflow run run.yml --ref master -f dry_run=false`.
 - To stop the schedule: Actions tab, "Autopilot run", the `...` menu, Disable workflow.
 - If a run fails after `git commit`, the push step fails loudly (a rebase conflict, for example). Nothing is overwritten; fix it locally.
 
+## Deploying the dashboard by hand
+
+The dashboard in `dashboard/` is a static site. It is deployed by hand: no workflow builds or publishes it.
+
+1. `git pull`, then re-export from the repo's tracked data: `python -m scripts.export_dashboard_data`.
+2. Publish the `dashboard/` folder as a static site with **no build command** (the folder is the site; the output directory is the folder itself).
+3. `dashboard/data.json` and `dashboard/data.js` must be in the folder you upload. They are untracked on purpose (listed in `.git/info/exclude`), so a deploy straight from a git checkout will not have them until step 1 is run on that machine.
+4. Review the Trace tab before uploading. It shows model output and tool results from the traces, which are redacted for secrets and raw post identifiers, but redaction is pattern-based: read it as you would before making the repo public.
+
 ## Assumptions and deviations from the build plan
 
 - **06:17 UTC** is an assumption: off the hour, when scheduled jobs queue, and later than 2 hours after a post made the evening before.
