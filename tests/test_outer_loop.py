@@ -16,7 +16,7 @@ from harness.fileio import read_jsonl
 from harness.llm import LLMUnavailable, MockLLM
 from harness.publish import approved_path
 from loops import outer
-from mcp_server import bluesky
+from mcp_server import bluesky, server
 from scripts import run_outer
 from tests.helpers import (  # noqa: F401
     GOOD_TEXT,
@@ -44,6 +44,9 @@ def bsky(monkeypatch) -> list[str]:
 
     monkeypatch.setattr(bluesky, "post", fake_post)
     monkeypatch.setattr(bluesky, "get_post_metrics", lambda uri: {"likes": 0, "reposts": 0, "replies": 0})
+    # publish_post stamps posted_at from the real clock while these tests pin the run's clock to NOW. Left alone,
+    # the test passed only until NOW + 2h of real time went by, then every later run saw a post "from the future".
+    monkeypatch.setattr(server, "_now", lambda: NOW.isoformat())
     return sent
 
 
