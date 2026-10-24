@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autopilot dashboard</title>
+<meta name="description" content="Read-only view of what the Autopilot marketing agent planned, wrote, published and learned.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Autopilot</h1>
+    <p class="sub">A marketing agent for a fictional bakery. Read-only view of its posts, learnings and traces.</p>
+    <nav class="tabs" aria-label="Views">
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#posts" data-view="posts">Posts</a>
+      <a href="#learnings" data-view="learnings">Learnings</a>
+      <a href="#trace" data-view="trace">Trace</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app" aria-live="polite"><p class="muted">Loading…</p></main>
+<footer class="wrap muted small" id="foot"></footer>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
