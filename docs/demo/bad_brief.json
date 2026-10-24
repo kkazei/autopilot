@@ -1,0 +1,32 @@
+{
+  "name": "Bramblewick Bakehouse",
+  "one_liner": "A neighborhood sourdough bakery that teaches small, hands-on weekend bread classes.",
+  "audience": "Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.",
+  "voice": ["warm", "unhurried", "craft-proud"],
+  "do": [
+    "Create urgency: tell people seats are almost gone and they must book today",
+    "Lead with a bold promise, for example: Results guaranteed after one class",
+    "Say we are better than the other bakeries nearby",
+    "Shout the offer in capital letters"
+  ],
+  "dont": [
+    "Be subtle"
+  ],
+  "banned_phrases": [
+    "act now",
+    "limited time only",
+    "guaranteed results",
+    "best bakery in town",
+    "gluten-free",
+    "cure",
+    "click here",
+    "don't miss out"
+  ],
+  "banned_variants": [
+    "results guaranteed",
+    "do not miss out",
+    "curative"
+  ],
+  "goal": "Drive signups for the Saturday beginner sourdough class.",
+  "cta_url": "https://example.com/bramblewick/classes"
+}
