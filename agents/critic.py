@@ -12,10 +12,12 @@ from harness.schemas import MAX_POST_CHARS, BrandBrief, Critique, Draft, Planned
 
 ROLE = "critic"
 
+# Calibration run_20261024_092334_1f3174: with clarity anchored only at 5 and 1, the critic gave 5 to every draft that
+# was not vague, including d03, d06 and d08, which each add a second message. The 3 anchor names that middle case.
 RUBRIC = f"""Score each dimension from 1 to 5 and give a one-sentence reason for each score.
 
 voice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the "dont" list.
-clarity: 5 = one idea, readable in 5 seconds, under {MAX_POST_CHARS} characters, and about the planned post's topic. 1 = vague, cluttered, two messages at once, or about something other than the planned topic.
+clarity: 5 = one idea, readable in 5 seconds, under {MAX_POST_CHARS} characters, and about the planned post's topic; the closing call to action alone is not a second idea. 3 = a main idea plus a second message or ask that competes with it (an aside on another subject, a second offer, or a question to the reader as well as the link). 1 = vague, cluttered, two equal messages at once, or about something other than the planned topic.
 cta: 5 = one specific next step that fits the post's goal. 1 = no action, or pushy and misleading.
 policy_risk (5 = safest): 5 = no banned phrase, every factual claim is in the brief or the planned post, nothing sensitive. 3 = a claim that is not in the brief or the planned post. 1 = makes claims the business cannot back up."""
 

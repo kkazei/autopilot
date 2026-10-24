@@ -246,6 +246,16 @@ def test_critic_system_prompt_has_the_topic_fit_rule():
     assert "about the planned post's topic" in critic.RUBRIC
 
 
+def test_critic_rubric_scores_a_second_message_as_clarity_3():
+    """Calibration run_20261024_092334_1f3174: d03, d06 and d08 each add a second message and got clarity 5 against
+    the user's 3, 3 and 2, while the rubric anchored clarity only at 5 and 1."""
+    [line] = [ln for ln in critic.RUBRIC.splitlines() if ln.startswith("clarity:")]
+    assert "3 = a main idea plus a second message or ask that competes with it" in line
+    assert "a question to the reader as well as the link" in line
+    assert "the closing call to action alone is not a second idea" in line  # d01 and d04 must still read as one idea
+    assert line in critic.system_prompt(BRIEF)
+
+
 def test_off_topic_draft_fails_and_its_reason_reaches_the_revision(run_id):
     offer = PlannedPost(id="post_t3", day="2026-10-23", topic="Free sample loaf with every first class booking",
                         angle="the free loaf is the hook", goal="click")
