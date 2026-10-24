@@ -120,10 +120,15 @@ def log_event(
     latency_ms: int | None = None,
     *,
     truncate: bool = True,
+    ts: datetime | None = None,
 ) -> TraceEvent:
-    """Append one redacted event. `truncate=False` is for the run summary, which must stay complete."""
+    """Append one redacted event. `truncate=False` is for the run summary, which must stay complete.
+
+    `ts` is for an event recorded elsewhere and copied in later (a Hermes tool call): it keeps the time the event
+    happened and is placed there in the trace, instead of reading as if it happened at copy time.
+    """
     event = TraceEvent(
-        ts=datetime.now(timezone.utc),
+        ts=ts or datetime.now(timezone.utc),
         run_id=run_id,
         agent=agent,
         kind=kind,
@@ -137,11 +142,22 @@ def log_event(
     try:
         with file_lock(path):
             events = _load_events(path)
-            events.append(event.model_dump(mode="json"))
+            events.insert(len(events) if ts is None else _position(events, event.ts), event.model_dump(mode="json"))
             atomic_write_text(path, json.dumps(events, indent=2, ensure_ascii=False) + "\n")
     except (OSError, LockTimeout, ValueError) as e:
         raise TraceWriteError(f"trace write failed for {run_id}: {type(e).__name__}") from e
     return event
+
+
+def _position(events: list[dict], ts: datetime) -> int:
+    """Index just after the last event at or before `ts`; an unreadable timestamp means "append", never a crash."""
+    for i in range(len(events), 0, -1):
+        try:
+            if datetime.fromisoformat(events[i - 1]["ts"]) <= ts:
+                return i
+        except (KeyError, TypeError, ValueError):
+            return len(events)
+    return 0
 
 
 def read_run(run_id: str) -> list[TraceEvent]:

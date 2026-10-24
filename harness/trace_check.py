@@ -13,6 +13,7 @@ import re
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from harness import trace
@@ -73,9 +74,22 @@ def cross_check(*, allowed_tools: Sequence[str], result: HermesResult, records: 
     return findings
 
 
+def _ran_at(call: dict[str, Any]) -> datetime | None:
+    """The server stamps each call when it starts; a missing, garbled or timezone-less stamp means "use now"."""
+    try:
+        ts = datetime.fromisoformat(str(call.get("ts")))
+    except ValueError:
+        return None
+    return ts if ts.tzinfo is not None else None
+
+
 def ingest_tool_calls(run_id: str, role: Agent, mcp_calls: Sequence[dict[str, Any]]) -> None:
-    """Copy the server's executed calls into the run trace: they ran in another process, so nothing else would."""
+    """Copy the server's executed calls into the run trace: they ran in another process, so nothing else would.
+
+    They are copied after Hermes exits, so each keeps the server's own timestamp and lands between the model calls
+    it really sat between (smoke run 092855_f3905e showed the tool call after the answer it fed).
+    """
     for call in mcp_calls:
         trace.log_event(run_id, role, "tool_call", f"{call.get('tool')} | {call.get('args')} (via hermes)",
                         f"receipt {call.get('receipt')}: {call.get('result')}", ok=bool(call.get("ok")),
-                        latency_ms=call.get("latency_ms"))
+                        latency_ms=call.get("latency_ms"), ts=_ran_at(call))
