@@ -56,7 +56,7 @@ Equivalent CLI: `gh workflow run run.yml --ref master -f dry_run=false`.
 
 - **06:17 UTC** is an assumption: off the hour, when scheduled jobs queue, and later than 2 hours after a post made the evening before.
 - The plan's `python -m loops.outer` does not exist here; the entry point is `python -m scripts.run_outer`.
-- **Hermes is not cloned.** The pipeline calls OpenRouter directly; the Hermes runtime (P2) is not built.
+- **Hermes is not installed on the runner.** The workflow runs with `AUTOPILOT_WRITER_RUNTIME` unset, which means `direct`: OpenRouter is called straight from the harness. Running the writer through Hermes (`AUTOPILOT_WRITER_RUNTIME=hermes`) is a local option; it needs the `hermes` CLI on the PATH, and the scheduled run only measures, so it has no writer to switch.
 - The schedule does not publish, which is the choice made on Oct 23 for the cron-versus-approval conflict. A posting cron would need
   a deliberate change to decision 4.7, or a pre-approved drafts queue that does not exist yet.
 - Pushes made with the built-in `GITHUB_TOKEN` do not trigger other workflows, so the data commit does not start a CI run.

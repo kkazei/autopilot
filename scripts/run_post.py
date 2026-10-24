@@ -25,6 +25,7 @@ from pydantic import ValidationError
 
 from harness import guardrails, trace
 from harness.env import load_dotenv
+from harness.hermes_llm import runtime_from_env, with_runtime
 from harness.llm import LLM, LLMError, OpenRouterLLM
 from harness.publish import (
     ApprovedLogError,
@@ -83,7 +84,7 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         _say(f"refused: brand brief is invalid ({e.error_count()} errors)")
         return EXIT_REFUSED
     try:
-        llm = llm or OpenRouterLLM()
+        llm = with_runtime(llm or OpenRouterLLM())
     except LLMError as e:
         _say(f"refused: {e}")
         return EXIT_REFUSED
@@ -91,7 +92,7 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     run_id = trace.start_run()
     trace.log_event(run_id, "harness", "decision", f"run_post | topic={args.topic!r} goal={args.goal}",
                     f"start: dry_run={args.dry_run} approval={args.approve} min_score={args.min_score}", ok=True)
-    _say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve})")
+    _say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve}, writer={runtime_from_env()})")
 
     try:
         published = live_records()

@@ -1,9 +1,10 @@
 """What every agent role shares: its tool allowlist, its attempt budget and how untrusted text enters a prompt.
 
-Agents call llm.py directly (Hermes comes later, in P2), so the allowlists in mcp_server.server.ROLE_TOOLS
-are enforced here too: a role is only offered its own tools, and a call to anything else is refused and
-traced, even if the model invents the name. Tools run in-process through the same functions the MCP
-server exposes, so the server's call log and checks still apply.
+Agents call an LLM object: llm.py's chain by default, or, for the writer only, a Hermes run behind the same
+interface (harness/hermes_llm.py). On the direct path the allowlists in mcp_server.server.ROLE_TOOLS are enforced
+here; under Hermes the role's MCP server enforces them. Either way a role is only offered its own tools, and a
+call to anything else is refused and traced, even if the model invents the name. Tools run in-process through
+the same functions the MCP server exposes, so the server's call log and checks still apply.
 """
 
 from __future__ import annotations
