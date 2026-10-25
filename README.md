@@ -29,7 +29,7 @@ planner -> writer -> critic -> (revise, up to 3x) -> harness checks -> human app
 - `harness/`: schemas, trace, guardrails, the model client with its fallback chain, publishing, quota. This is where the rules above live.
 - `mcp_server/`: the tools (brand brief, learnings, metrics, publish, save learning) behind one MCP server, with per-role allowlists.
 - `scripts/`: `run_post.py` (one post), `run_outer.py` (the weekly loop), `export_dashboard_data.py`, `demo_bad_brief.py`.
-- `dashboard/`: a static, read-only page (overview, posts, learnings, trace). `evals/` and `tests/`: the tests.
+- `dashboard/`: a static, read-only one-page dashboard (totals, posts, learnings, runs); a post, a run's trace and the known limits open in dialogs. `evals/` and `tests/`: the tests.
 
 ## Running it at $0
 
