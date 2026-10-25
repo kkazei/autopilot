@@ -42,6 +42,14 @@ def test_a_good_plan_passes_and_week_of_is_set_by_the_harness(run_id, brief):
     assert plan.week_of == TODAY and len(plan.posts) == 3
 
 
+def test_the_planner_is_told_an_angle_names_a_focus_and_describes_nothing(brief):
+    """Run run_20261024_114318_baec64: the angle "crust that cracks like leather" invented a sensory claim."""
+    prompt = planner.system_prompt(brief)
+    assert planner.ANGLE_RULE in prompt
+    assert "does not describe how anything looks, smells, tastes, feels or sounds" in prompt
+    assert "no claim the brief does not make" in prompt
+
+
 def test_a_plan_with_a_day_outside_the_week_gets_one_retry_that_names_the_problem(run_id, brief):
     bad = week_json(days=("2026-10-22", "2026-10-25", "2026-10-30"))
     llm = MockLLM([bad, week_json()])

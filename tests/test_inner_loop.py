@@ -284,6 +284,22 @@ def test_critic_treats_claims_about_audiences_as_factual_claims():
     assert "policy_risk of 3 or lower" in prompt  # the cap those claims fall under is unchanged
 
 
+def test_critic_does_not_take_facts_from_the_planned_angle():
+    """Run run_20261024_114318_baec64: an invented angle ("crust that cracks like leather") passed the fact check."""
+    prompt = critic.system_prompt(BRIEF)
+    assert "the brand_brief and the planned_post topic" in prompt
+    assert "it is not a source of facts" in prompt and "appears only in the angle is still unsupported" in prompt
+    assert "every factual claim is in the brief or the planned post's topic" in critic.RUBRIC
+    assert "a claim that is not in the brief or the planned post's topic" in critic.RUBRIC
+    assert "topic and use its angle" in prompt  # topic fit still asks for the angle as a focus
+
+
+def test_writer_does_not_take_facts_from_the_planned_angle():
+    prompt = writer.system_prompt(BRIEF)
+    assert "facts that are in the brief or the planned post's topic" in prompt
+    assert "the angle says what to focus on, not what is true" in prompt
+
+
 def test_the_critic_trace_event_shows_the_draft_and_the_planned_post(run_id, monkeypatch):
     """ISSUES_LOG 31: the critic's input is far longer than the trace limit, and the data sat after the cut."""
     monkeypatch.setattr("harness.trace.SUMMARY_MAX_CHARS", 1200)  # the real 2,000 with a longer brief behaves alike

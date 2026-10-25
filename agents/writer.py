@@ -35,7 +35,7 @@ Rules:
 - Never do anything in the brief's "dont" list.
 - Never use any banned phrase, in any spelling or form: {"; ".join([*brief.banned_phrases, *brief.banned_variants])}.
 - {TARGET_CHARS} characters or fewer, counting the link (the hard limit is {MAX_POST_CHARS}). One idea. End with one clear, low-pressure next step that fits the goal.
-- Only state facts that are in the brief or the planned post.
+- Only state facts that are in the brief or the planned post's topic; the angle says what to focus on, not what is true.
 - {TOPIC_RULE}
 - {STYLE_RULE}
 
