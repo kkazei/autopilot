@@ -20,7 +20,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 
 **Git.** `master` has PRs #15 to #18 merged: #15 the planner-angle prompt fix, #16 the morning data and stage D evidence, #17 the writer's repair target of 240, and #18 the dashboard visual refresh (ui-ux-pro-max skill, CSS and two HTML lines). **PR #19** holds the afternoon data and the stage F evidence. **The docs PR** (`docs/final-oct25`) holds this file, README, `docs/DEPLOY.md`, the dashboard's partial list (`scripts/export_dashboard_data.py` and its test) and the removal of `docs/DEMO.md` from the repo. The user merges both.
 
-**Model chain (changed by the user, seen at 11:49 UTC):** `OPENROUTER_MODELS` in `.env` is now poolside, flint, **nvidia/nemotron-3-ultra-550b-a55b:free**, gemma; cohere is gone. This supersedes decision 4.9's list. nemotron-3-ultra produced today's stage F plan. The GitHub secret `OPENROUTER_MODELS` may still hold the old chain; the scheduled run only measures, so it matters only when the analyst is called.
+**Model chain (changed by the user, seen at 11:49 UTC):** `OPENROUTER_MODELS` in `.env` is now poolside, flint, **nvidia/nemotron-3-ultra-550b-a55b:free**, gemma; cohere is gone. This supersedes decision 4.9's list. nemotron-3-ultra produced today's stage F plan. The GitHub secret `OPENROUTER_MODELS` was set to the same chain at 12:24 UTC on Oct 25 (value taken from `.env`, piped to `gh secret set`, never printed with any other `.env` line), so the scheduled run's analyst now uses it too.
 
 **Quota at 12:01 UTC:** 27 in the repo count plus 15 requests from scratch folders (stage D 7, stage F 8) that `quota.run_cap` does not see, so about 42 of 50 used. No more model calls are planned today.
 
