@@ -3,11 +3,11 @@
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
 ## 1. Sources of truth
-- **Repo:** `C:\Users\jirro\orca\projects\autopilot` (Windows 11, PowerShell plus Git Bash).
+- **Repo:** the local clone of `autopilot` (Windows 11, PowerShell plus Git Bash).
   - Remote: `https://github.com/kkazei/autopilot` (private).
   - Main branch `master`. Work goes through short branches and pull requests: **PRs #1 to #21 are all merged and no PR is open (Oct 25)**; the history that follows is kept as it was written. PRs #1 to #11 are **merged** (see the Oct 24 update in section 2 for #5 to #11; #13 is merged too, per the user; the list that follows is the Oct 23 state) (#1 all of Day 1-2 code, #2 first learnings, #3 the critic calibration tool, #4 the hand scores, the first partial calibration run and the handoff); **PR #5** (GitHub Actions bumped to v7 for Node 24, plus one bot data commit from its test run) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
   - **The GitHub workflow pushes data commits straight to `master`** (author `autopilot[bot]`, message `data: scheduled run <id>`). Run `git pull` before posting or branching, so you have its traces and any learnings it saved.
-- **Build plan (authoritative):** `C:\Users\jirro\Downloads\Autopilot 3-Day Build Plan and Claude Code Prompts.pdf` (30 pages).
+- **Build plan (authoritative):** the PDF "Autopilot 3-Day Build Plan and Claude Code Prompts" (30 pages; kept on the builder's disk, not in the repo).
   - It holds the repo layout, the data contracts, prompts D1-S to D3-C, the critic rubric, the failure table, deployment and the demo script.
   - The Read tool can't render it on this machine; use `pdftotext -layout` (available in Git Bash).
 - **`CLAUDE.md`:** the project rules. Paste artifacts were removed in `d10bb10`, and it now also says no attribution trailers.
@@ -169,7 +169,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 | `74abe56`, `0033d85` | data: calibration run after the clarity change, and the merge of PR #11 | yes (`master`) |
 | `284bf48` | data: real-model outer loop dry run (PR #13) | PR #13, merged by the user (merge commit not seen here) |
 
-- Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
+- Every commit is authored by the user's git identity (user name `z`), with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
 - **Untracked on purpose (historical):** `data/runs/run_20261022_080056_bb7b95.json`, a P1 sample dry-run trace with no LLM calls, was kept out of git; it is no longer on disk (Oct 25), and the export still excludes it by name.
 - **Local only, also not in git (Oct 25):** `docs/DEMO.md` and `docs/QA_PREP.md`.
