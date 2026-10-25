@@ -150,8 +150,8 @@ def test_the_overview_says_what_is_partial(data):
     (data / "calibration" / "report.partial-run_x.md").write_text(
         "- Drafts: 10 in the file, 7 scored by the critic, 10 with your scores\n", "utf-8")
     partial = " ".join(export.build(data)["overview"]["partial"])
-    for fragment in ("7 of 10", "scheduled", "planner", "real model"):
-        assert fragment in partial
+    for fragment in ("7 of 10", "scheduled", "planner", "real model", "friends"):
+        assert fragment in partial  # "friends": the one learning with signal must never read as organic engagement
 
 
 def test_a_complete_calibration_report_states_the_result(data):
@@ -161,6 +161,19 @@ def test_a_complete_calibration_report_states_the_result(data):
     partial = " ".join(export.build(data)["overview"]["partial"])
     assert "complete" in partial and "6 of 10" in partial and "d03, d06, d08, d10" in partial
     assert "is partial" not in partial
+    assert "no rubric fix has been measured yet" in partial
+
+
+def test_the_after_change_calibration_is_stated_with_its_noise_caveat(data):
+    """PRs #10 and #11: one rubric change moved agreement from 6 to 7 of 10, which is one draft and within noise."""
+    (data / "calibration").mkdir()
+    (data / "calibration" / "report.md").write_text(
+        "- Agreement: **6 of 10** (60%)\n- Critic passes a draft you would fail (too lenient): 4 (d03, d06, d08, d10)\n", "utf-8")
+    (data / "calibration" / "report.after-clarity-anchor.md").write_text(
+        "- Agreement: **7 of 10** (70%)\n- Critic passes a draft you would fail (too lenient): 3 (d03, d06, d10)\n", "utf-8")
+    partial = " ".join(export.build(data)["overview"]["partial"])
+    assert "6 of 10" in partial and "after one rubric change, 7 of 10 drafts (too lenient on d03, d06, d10)" in partial
+    assert "within run-to-run noise" in partial and "no rubric fix" not in partial
 
 
 # Secrets ------------------------------------------------------------------------------------------------------------

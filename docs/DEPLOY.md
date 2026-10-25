@@ -56,6 +56,33 @@ Equivalent CLI: `gh workflow run run.yml --ref master -f dry_run=false`.
 
 The dashboard in `dashboard/` is a static site. It is deployed by hand: no workflow builds or publishes it.
 
+It is live at https://autopilot.jirroaeron.workers.dev/. A Cloudflare Worker (Workers Builds, static assets only) is connected to the GitHub
+repository and rebuilds it on every push to `master`: merged pull requests and the scheduled run's data commits alike
+($0). The build settings:
+
+| Setting | Value |
+|---|---|
+| Production branch | `master` |
+| Root directory | empty (the repo root; the build must see `scripts/` and `harness/`) |
+| Build command | `pip install "pydantic>=2,<3" && python -m scripts.export_dashboard_data` |
+| Deploy command | `npx wrangler deploy --assets=./dashboard --name autopilot --compatibility-date=2026-10-01` |
+| Build variable | `PYTHON_VERSION` = `3.11` |
+
+A root directory of `dashboard` makes the build fail with `No module named 'scripts'` (seen on Oct 25). Builds of
+other branches run the version (preview) command, `npx wrangler versions upload ...`, which uploads a version but does
+not serve it; the preview `workers.dev` address is switched off on purpose, so only `master` is ever public.
+
+The export needs only pydantic beyond the standard library, so the build skips the rest of `requirements.txt`. It reads
+only files git tracks, never `.env`, and needs no secrets. If its final scan finds a secret or a raw identifier it
+refuses to write the data, so the build fails and the last good version stays up.
+
+**Trade-off:** step 4 below (reading the Trace tab before it goes public) no longer happens before each deploy. The
+scan is the only check, and it is pattern-based. Data reaches `master` only through reviewed pull requests or the
+measure-only scheduled run.
+
+The first deploy (Oct 25) was a manual upload to https://restless-morning-449e.jirroaeron.workers.dev/; that copy does
+not update. The manual steps below still work for a one-off upload.
+
 1. `git pull`, then re-export from the repo's tracked data: `python -m scripts.export_dashboard_data`.
 2. Publish the `dashboard/` folder as a static site with **no build command** (the folder is the site; the output directory is the folder itself).
 3. `dashboard/data.json` and `dashboard/data.js` must be in the folder you upload. They are untracked on purpose (listed in `.git/info/exclude`), so a deploy straight from a git checkout will not have them until step 1 is run on that machine.
