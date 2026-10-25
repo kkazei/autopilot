@@ -1,11 +1,11 @@
-# Autopilot handoff, updated 2026-10-25 (final day; evidence stages A to F done or closed, see the Oct 25 update)
+# Autopilot handoff, final (2026-10-25, about 12:35 UTC): the build is finished; see "Final state" in section 2
 
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
 ## 1. Sources of truth
 - **Repo:** `C:\Users\jirro\orca\projects\autopilot` (Windows 11, PowerShell plus Git Bash).
   - Remote: `https://github.com/kkazei/autopilot` (private).
-  - Main branch `master`. Work now goes through short branches and pull requests: PRs #1 to #11 are **merged** (see the Oct 24 update in section 2 for #5 to #11; #13 is merged too, per the user; the list that follows is the Oct 23 state) (#1 all of Day 1-2 code, #2 first learnings, #3 the critic calibration tool, #4 the hand scores, the first partial calibration run and the handoff); **PR #5** (GitHub Actions bumped to v7 for Node 24, plus one bot data commit from its test run) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
+  - Main branch `master`. Work goes through short branches and pull requests: **PRs #1 to #21 are all merged and no PR is open (Oct 25)**; the history that follows is kept as it was written. PRs #1 to #11 are **merged** (see the Oct 24 update in section 2 for #5 to #11; #13 is merged too, per the user; the list that follows is the Oct 23 state) (#1 all of Day 1-2 code, #2 first learnings, #3 the critic calibration tool, #4 the hand scores, the first partial calibration run and the handoff); **PR #5** (GitHub Actions bumped to v7 for Node 24, plus one bot data commit from its test run) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
   - **The GitHub workflow pushes data commits straight to `master`** (author `autopilot[bot]`, message `data: scheduled run <id>`). Run `git pull` before posting or branching, so you have its traces and any learnings it saved.
 - **Build plan (authoritative):** `C:\Users\jirro\Downloads\Autopilot 3-Day Build Plan and Claude Code Prompts.pdf` (30 pages).
   - It holds the repo layout, the data contracts, prompts D1-S to D3-C, the critic rubric, the failure table, deployment and the demo script.
@@ -15,16 +15,20 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 
 ## 2. Where we are (one-screen summary)
 
-### Final state (Oct 25, about 12:05 UTC; read this first)
+### Final state (Oct 25, about 12:35 UTC; read this first)
 **Done.** Every evidence stage is closed (table below). Live posts end at 3 (one new today). The dashboard is live and rebuilds itself on every push to `master`, including the scheduled bot's pushes (seen at 11:27 UTC).
 
-**Git.** `master` has PRs #15 to #18 merged: #15 the planner-angle prompt fix, #16 the morning data and stage D evidence, #17 the writer's repair target of 240, and #18 the dashboard visual refresh (ui-ux-pro-max skill, CSS and two HTML lines). **PR #19** holds the afternoon data and the stage F evidence. **The docs PR** (`docs/final-oct25`) holds this file, README, `docs/DEPLOY.md`, the dashboard's partial list (`scripts/export_dashboard_data.py` and its test) and the removal of `docs/DEMO.md` from the repo. The user merges both.
+**Git.** **`master` is the only branch**, locally and on GitHub, at the merge of PR #21 or later; no PR is open. Today's PRs, all merged by the user: #15 the planner-angle prompt fix, #16 the morning data and stage D evidence, #17 the writer's repair target of 240, #18 the dashboard visual refresh (ui-ux-pro-max skill, CSS and two HTML lines), #19 the afternoon data and stage F evidence, #20 the final docs and the dashboard's partial list (and the removal of `docs/DEMO.md` from the repo), #21 the model-chain secret note. After the merges, every other branch was deleted (21 on GitHub, each checked to be merged into `master` first; 3 local, including `docs/calibration-complete-text` with its never-to-be-pushed sample-trace commit `5ea175e`, and the old `pr9-fix` worktree). A merged PR's page can restore its branch if ever needed. Tests: 541 on Python 3.11 and 3.14, CI green.
+
+**Dashboard:** https://autopilot.jirroaeron.workers.dev/, dark-first design (#18), verified at 12:23 UTC after the #19 and #20 rebuilds: 3 live posts, 26 runs, 1 of 3 learnings with signal, and the 5-line "What is partial" list. The user still has to check it on a phone.
 
 **Model chain (changed by the user, seen at 11:49 UTC):** `OPENROUTER_MODELS` in `.env` is now poolside, flint, **nvidia/nemotron-3-ultra-550b-a55b:free**, gemma; cohere is gone. This supersedes decision 4.9's list. nemotron-3-ultra produced today's stage F plan. The GitHub secret `OPENROUTER_MODELS` was set to the same chain at 12:24 UTC on Oct 25 (value taken from `.env`, piped to `gh secret set`, never printed with any other `.env` line), so the scheduled run's analyst now uses it too.
 
-**Quota at 12:01 UTC:** 27 in the repo count plus 15 requests from scratch folders (stage D 7, stage F 8) that `quota.run_cap` does not see, so about 42 of 50 used. No more model calls are planned today.
+**Quota at 12:01 UTC:** 27 in the repo count plus 15 requests from scratch folders (stage D 7, stage F 8) that `quota.run_cap` does not see, so about 42 of 50 used. No model call was made after that.
 
-**Left after today:** the user records the backup video and rehearses (`docs/DEMO.md` and `docs/QA_PREP.md`, both local only). Next steps, in the README: a draft queue with a one-click approval page; a code check for times, prices and numbers not in the brief; re-measuring "not enough data" posts; an automatic check of the account's server after a publish timeout (issue 44); replacing poolside's `laguna` id before Oct 31.
+**Local-only files (on the user's disk, not in git, listed in `.git/info/exclude`):** `docs/DEMO.md` (the 8-minute demo and video script; step 6 covers stage F), `docs/QA_PREP.md` (Q&A notes), `docs/ISSUES_LOG.md`. **Git overwrites excluded files without warning when it checks out a commit that tracks them**: on Oct 25 a switch to an old local `master` deleted `DEMO.md`, which was rebuilt from the session. Copies are in the Oct 25 session scratchpad (`local-docs-backup/`); the user should keep their own copy too.
+
+**Left after today:** the user checks the dashboard on a phone, records the backup video and rehearses twice (`docs/DEMO.md` and `docs/QA_PREP.md`). Optional: two commit messages on `master` still say "friends" for the people who liked the post (everything visible says "people the builder knows"); rewriting them would need a force-push to `master`, so they are left. Next steps, in the README: a draft queue with a one-click approval page; a code check for times, prices and numbers not in the brief; re-measuring "not enough data" posts; an automatic check of the account's server after a publish timeout (issue 44); replacing poolside's `laguna` id before Oct 31.
 
 ### Oct 25 update (read this first; it supersedes the Oct 24 and Oct 23 statements below wherever they differ)
 **Repo.** PRs #15 (issue 39 prompt fix), #16 (data: third live post, a declined run, stage D evidence), #17 (writer repair target 240), #18 (dashboard visual refresh), #19 (afternoon data, stage F evidence) and the final docs PR carry today's work. Tests: 541 on Python 3.11 and 3.14 after the docs PR (540 on `master`, plus one export test).
@@ -90,7 +94,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 6. Stage C: the user runs `run_post` in a real terminal, never with the `!` prefix, with a real topic, for example `.venv311/Scripts/python.exe -m scripts.run_post --topic "Free sample loaf with every first class booking" --goal click`. Each post costs 2 to 9 requests.
 7. After the last stage: update this handoff, the README and the dashboard export text for the new results, in a PR, and give the user a one-screen list of proven, partial and unproven.
 
-**Local repo cautions.** The local branch `docs/calibration-complete-text` carries an unpushed commit `5ea175e` that adds `data/runs/run_20261022_080056_bb7b95.json`. **Never push that branch or commit that file.** A copy of the file is in the Oct 24 session scratchpad; `git checkout master` from that branch deletes it from disk, so copy it first and put it back untracked. A `pr9-fix` worktree also exists in a session scratchpad. Local branches `data/calibration-complete`, `feat/dashboard-and-demo`, `feat/hermes-writer` are merged and can be deleted.
+**Local repo cautions (Oct 24; resolved Oct 25).** The branch `docs/calibration-complete-text` with the unpushed sample-trace commit `5ea175e`, the `pr9-fix` worktree and the merged local branches were all deleted on Oct 25; the sample trace was never pushed.
 - **Status: Day 1 complete; Day 2 is code-complete and partly proven live, with evidence still outstanding.**
   - **Proven for real:** 2 live posts; the measure-only outer loop against the live account (2 learnings saved, no model call); the GitHub deploy workflow (one manual run succeeded); CI on every PR; and (Oct 24) a complete critic calibration before and after one rubric change, plus a real-model dry run of the planner and the write-and-critique half of `run_outer`.
   - **Not yet proven live (Oct 24):** more live posts, the scheduled run (unconfirmed, see the Oct 24 update), the by-hand failure forcing against a real model, and the "plan cites a learning" check. The planner and writer/critic inside `run_outer` have run once on real models, as a dry run with approval off.
@@ -167,9 +171,10 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 
 - Every commit is authored by the user's identity `z <jirroaeron@gmail.com>`, with no trailers.
 - **Local only, not in git:** `docs/ISSUES_LOG.md` (listed in `.git/info/exclude`).
-- **Untracked on purpose:** `data/runs/run_20261022_080056_bb7b95.json`, a P1 sample dry-run trace with no LLM calls. Keep it out of git so it never shows on the dashboard.
+- **Untracked on purpose (historical):** `data/runs/run_20261022_080056_bb7b95.json`, a P1 sample dry-run trace with no LLM calls, was kept out of git; it is no longer on disk (Oct 25), and the export still excludes it by name.
+- **Local only, also not in git (Oct 25):** `docs/DEMO.md` and `docs/QA_PREP.md`.
 - **Scratch work from today lives outside the repo:** the model probe script and its traces are in the session scratchpad, not in `data/`. The 4 probe requests are therefore not counted by `quota.run_cap`.
-- **Local `master` is stale** (it still points at the initial commit); `origin/master` is the real one. Branch from `origin/master` (`git checkout -b <name> origin/master`) and do not trust local `master`.
+- **Local `master`** tracks `origin/master` and is the only branch (Oct 25). Still `git pull` before branching: the scheduled bot pushes data commits to `master`.
 - **Git-ignored:** `.env`, `.venv/`, `.venv311/`, `data/runtime/` (the MCP call log), `.hermes_spike/`, `vendor/hermes-agent/`.
 
 ## 4. User decisions (settled: do not re-ask)
