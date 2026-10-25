@@ -147,23 +147,42 @@ def _partial(data_dir: Path) -> list[str]:
     cal = data_dir / "calibration"
     if (cal / "report.md").exists():
         text = (cal / "report.md").read_text(encoding="utf-8")
-        agree = re.search(r"Agreement: \*\*(\d+) of (\d+)\*\*", text)
-        lenient = re.search(r"too lenient\): \d+ \(([^)]*)\)", text)
+        agree, lenient = _agreement(text)
         if agree:
-            line = f"Critic calibration is complete: the critic agreed with the hand scores on {agree.group(1)} of {agree.group(2)} drafts"
-            line += f" (too lenient on {lenient.group(1)})" if lenient else ""
-            items.append(line + "; no rubric fix has been measured yet.")
+            line = f"Critic calibration is complete: the critic agreed with the hand scores on {agree}"
+            line += f" (too lenient on {lenient})" if lenient else ""
+            after = cal / "report.after-clarity-anchor.md"
+            if after.exists():
+                agree2, lenient2 = _agreement(after.read_text(encoding="utf-8"))
+                line += f"; after one rubric change, {agree2}" + (f" (too lenient on {lenient2})" if lenient2 else "")
+                line += ", a gain within run-to-run noise."
+            else:
+                line += "; no rubric fix has been measured yet."
+            items.append(line)
     else:
         report = next(iter(sorted(cal.glob("report.partial-*.md"))), None)
         m = re.search(r"Drafts: (\d+) in the file, (\d+) scored", report.read_text(encoding="utf-8")) if report else None
         items.append(f"Critic calibration is partial: {m.group(2)} of {m.group(1)} drafts scored." if m
                      else "Critic calibration has not been run.")
     items += [
-        "The scheduled 06:17 UTC run did not fire on Oct 24: unproven.",
-        "The planner inside run_outer has not run live yet (mocks only).",
-        "Failures were forced offline with scripted models; forcing them against a real model is not done.",
+        "On real drafts the critic passed an invented class time, invented crust details, a claim about customers, "
+        "urgency pressure and invented scarcity; human approval caught each one. Its fact and policy checks are not "
+        "reliable on the free model.",
+        "No organic engagement yet: the one learning with signal comes from likes by people the builder knows. A real "
+        "planner citing it was shown once, with the planner alone (data/evidence/stage_f).",
+        "The scheduled 06:17 UTC run has fired twice (Oct 24 and 25), hours late each time. It only measures.",
+        "Failures forced against a real model (data/evidence/stage_d): the rate cap held; prompt injection was resisted "
+        "but the run stopped before the critic; the banned phrase and the revision cap were not forced.",
     ]
     return items
+
+
+def _agreement(report: str) -> tuple[str | None, str | None]:
+    """("6 of 10 drafts", "d03, d06") from a calibration report, or None for whatever the report does not state."""
+    agree = re.search(r"Agreement: \*\*(\d+) of (\d+)\*\*", report)
+    lenient = re.search(r"too lenient\): \d+ \(([^)]*)\)", report)
+    return (f"{agree.group(1)} of {agree.group(2)} drafts" if agree else None,
+            lenient.group(1) if lenient else None)
 
 
 def build(data_dir: Path, tracked: set[Path] | None = None, now: datetime | None = None) -> dict:

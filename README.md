@@ -45,7 +45,7 @@ Things that cost nothing and need no key:
 
 ```
 python -m pytest -q                      # the whole test suite, offline (models are mocked)
-python -m scripts.demo_bad_brief         # replay the planted-bad-brief demo with scripted models (docs/DEMO.md)
+python -m scripts.demo_bad_brief         # replay the planted-bad-brief demo with scripted models (docs/demo/bad_brief.json)
 python -m scripts.export_dashboard_data  # build dashboard/data.json; then open dashboard/index.html in a browser
 ```
 
@@ -63,16 +63,39 @@ Run these in a real terminal: the approval prompt needs a keyboard. Models are l
 ## What is proven, and what is partial
 
 **Proven for real**
-- 2 live posts on Bluesky, each human-approved, with full traces.
-- The measuring half of the outer loop against the live account (it read both posts and saved a learning for each; engagement was zero, so both learnings say "not enough data").
-- The deploy workflow ran once by hand and succeeded; CI runs the tests on every pull request.
-- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering) in automated tests, and once more by hand with scripted models.
+- 3 live posts on Bluesky, each human-approved, with full traces. Four more drafts were declined at the approval prompt (an invented class time, invented crust details, invented scarcity, and one claim about customers), and their traces are kept too.
+- The learn loop on real data: a live post was measured (4 likes, **from people the builder knows, not an organic audience**), the analyst saved a learning, and a real planner cited it in a plan that passed the harness's check (`data/evidence/stage_f`). The two earlier posts had zero engagement, so their learnings say "not enough data".
+- The scheduled GitHub run fired on its own on Oct 24 and Oct 25 (hours after its 06:17 UTC slot each time) and succeeded. It only measures and can never publish. Its data push rebuilds the dashboard with nobody involved. CI runs the tests on every pull request.
+- The planner and the write-and-critique half of the outer loop ran on real free models, as a dry run (plan, draft, a length repair, critique, all guardrails, a `dryrun://` publish).
+- A Bluesky timeout after sending: the pending row blocked a retry, the account's server showed no post, and the row was settled by hand without editing history (`run_20261025_103042_bfa092`).
+- On real models, from real traces: JSON/length repair (it succeeded several times and failed cleanly twice), 429 backoff and fallback down the chain, and guardrails before every publish. The rate cap blocked a run before any model call on the real harness (`data/evidence/stage_d`).
+- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering) in automated tests.
+- The dashboard is live at https://autopilot.jirroaeron.workers.dev/ and rebuilds itself on every push to `master` (Cloudflare Workers Builds, $0; see `docs/DEPLOY.md`).
 
 **Partial or not proven yet**
-- **Critic calibration is complete, and the critic is too lenient:** all 10 drafts scored by one model, which agreed with the hand scores on 6 of 10 and passed four drafts that should fail (d03, d06, d08, d10). No rubric fix has been made or re-measured.
-- **The scheduled run is unproven:** the 06:17 UTC GitHub run did not fire on Oct 24. It only measures and can never publish.
-- **The planner inside the outer loop has not run live:** only against mocks. There is no learning with real engagement for it to cite yet.
-- **Real-model failure forcing is not done:** the failures were forced with scripted models, so this shows the harness reacts correctly, not that a real free model misbehaves in those ways.
-- The 50-requests-a-day free limit is assumed, not confirmed for this account.
+- **The critic is the weak link.** Calibration on 10 hand-scored drafts: it agreed on 6 of 10 and was too lenient on d03, d06, d08 and d10. One rubric change raised that to 7 of 10, which is one draft and within run-to-run noise, measured on the same 10 drafts. It is still lenient on d03, d06 and d10. On real drafts it scored an invented class time, invented crust details, a claim about customers and urgency pressure 5 out of 5, and it noticed invented scarcity ("a few spots remain") but still passed it at 4. Human approval caught each one, which is why approval stays mandatory.
+- **No organic engagement.** The one learning with signal comes from likes by people the builder knows, and the plan's use of it is shallow. The plan citing it was shown once, with the planner alone, after a first attempt failed on free-model errors.
+- **The free writer often overshoots the 300-character limit.** On Oct 25, 4 of 8 one-shot repairs failed. The repair now aims at 240 (PR #17); that is unproven on a real model.
+- **The planner's angle was a source of invented claims** (stage B). The prompts now treat the angle as a focus, not as a fact (PR #15). That is tested offline only. The calibration numbers above were measured on the critic prompt before that change.
+- **Failure forcing on a real model is partial** (`data/evidence/stage_d/README.md`). Prompt injection was resisted, but the run stopped at a length repair before the critic. The banned phrase was not forced: the writer avoided it, and approval caught the urgency instead. The revision cap was not forced: the free critic is too lenient to fail three times on demand.
+- **The scheduled run has fired twice**, hours late each time. That is still thin evidence for unattended running.
+- **The 50-requests-a-day free limit is assumed**, not confirmed for this account. The free model pool is unstable, and poolside's `laguna` id expires on Oct 31.
 
-Details and decisions: `docs/HANDOFF.md`. To see it in action: `docs/DEMO.md`. Deploying the workflow and the dashboard: `docs/DEPLOY.md`.
+## What it is autonomous at, and what is next
+
+It plans the week, writes and revises drafts, checks them, measures the posts and learns from them on its own; the
+scheduled GitHub run measures and learns every day with nobody at the keyboard. **It does not publish on its own.**
+A human approves every post, because the critic missed an invented class time and urgency pressure on real drafts.
+
+Next steps, in order:
+1. **A draft queue with a one-click approval page.** The scheduled run would write each day's post and queue it; a
+   small local page would show the draft and the critic's reasons with Approve and Decline buttons, which call the
+   same harness checks as today's terminal prompt. Posting gets close to autonomous while the human check stays.
+2. **A code check for times, prices and numbers that are not in the brief.** It would have caught the invented class
+   time without relying on the critic.
+3. **Measure "not enough data" posts again later.** Each post is measured once today, so a post measured early keeps
+   its first reading.
+4. **Check the account's server automatically after a publish timeout**, instead of leaving "outcome unknown" for a human to settle by hand.
+5. **Replace poolside's `laguna` model id** before it expires on Oct 31, and recalibrate the critic on fresh drafts.
+
+Details and decisions: `docs/HANDOFF.md`. To see it in action: the dashboard, and `python -m scripts.demo_bad_brief`. Deploying the workflow and the dashboard: `docs/DEPLOY.md`.

@@ -1,4 +1,4 @@
-"""docs/DEMO.md promises that the planted bad brief causes a critic rejection and then a guardrail block: pin it."""
+"""The demo promises that the planted bad brief causes a critic rejection and then a guardrail block: pin it."""
 
 from __future__ import annotations
 
