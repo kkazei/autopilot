@@ -14,7 +14,7 @@ import pytest
 from agents import base, critic, writer
 from harness import trace
 from harness.llm import LLMResponse, LLMUnavailable, MockLLM
-from harness.schemas import BrandBrief, Draft, PlannedPost
+from harness.schemas import MAX_POST_CHARS, BrandBrief, Draft, PlannedPost
 from loops.inner import run_inner
 from mcp_server import server
 
@@ -113,11 +113,18 @@ def test_overlong_draft_goes_through_one_repair(run_id):
     llm = MockLLM([draft("x" * 348), draft("short")])
     assert writer.write(llm, run_id, PLANNED, BRIEF, attempt=1).text == "short"
     repair = llm.calls[1][-1]["content"]
-    assert "is 348 characters; the limit is 300" in repair and "280 characters or fewer" in repair
+    assert "is 348 characters; the limit is 300" in repair and "240 characters or fewer" in repair
 
 
 def test_writer_prompt_asks_for_280_characters_or_fewer():
     assert "280 characters or fewer" in writer.system_prompt(BRIEF)
+
+
+def test_the_repair_aims_below_the_first_draft_target():
+    """Oct 25: repairs that asked for 280 came back at 303 to 402 characters, so the repair asks for less."""
+    assert writer.REPAIR_TARGET_CHARS == 240
+    assert writer.REPAIR_TARGET_CHARS < writer.TARGET_CHARS < MAX_POST_CHARS
+    assert writer.REPAIR_HINT == "Keep the text to 240 characters or fewer."
 
 
 def test_llm_failure_ends_the_loop_as_failed(run_id):

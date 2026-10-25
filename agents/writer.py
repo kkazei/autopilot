@@ -24,7 +24,10 @@ STYLE_RULE = ("Say the topic the way the bakery would say it aloud: do not open 
               "say what people usually do, notice or feel, because that is a claim about customers. Where it fits, "
               "mention one thing the brief names (crust, crumb, flour, the oven) without describing how it smells, "
               "tastes or feels beyond what the brief says.")
-REPAIR_HINT = f"Keep the text to {TARGET_CHARS} characters or fewer."
+# Oct 25: four repairs asked for 280 and came back over the 300 cap (391, 303, 402 and 312 characters; runs 4ca574,
+# 395daf, 8202cc and d77bec), so the one repair aims lower than the first draft to leave room for the overshoot.
+REPAIR_TARGET_CHARS = 240
+REPAIR_HINT = f"Keep the text to {REPAIR_TARGET_CHARS} characters or fewer."
 
 
 def system_prompt(brief: BrandBrief) -> str:
