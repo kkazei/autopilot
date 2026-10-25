@@ -4,27 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)">
 <title>Autopilot dashboard</title>
 <meta name="description" content="Read-only view of what the Autopilot marketing agent planned, wrote, published and learned.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top">
-  <div class="wrap">
-    <h1>Autopilot <span class="pill">read-only</span></h1>
-    <p class="sub">A marketing agent for a fictional bakery. Read-only view of its posts, learnings and traces.</p>
-    <nav class="tabs" aria-label="Views">
-      <a href="#overview" data-view="overview">Overview</a>
-      <a href="#posts" data-view="posts">Posts</a>
-      <a href="#learnings" data-view="learnings">Learnings</a>
-      <a href="#trace" data-view="trace">Trace</a>
-    </nav>
+  <div class="wrap top-row">
+    <div class="brand">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <h1>Autopilot</h1>
+        <p class="sub">Marketing agent for a fictional bakery</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="chip warn" id="limits-btn" hidden>Known limits <span class="count" id="limits-count"></span></button>
+      <span class="pill" title="Nothing on this page can post">Read-only</span>
+    </div>
   </div>
+  <nav class="wrap jump" aria-label="Sections">
+    <a href="#posts-sec">Posts</a>
+    <a href="#learnings-sec">Learnings</a>
+    <a href="#runs-sec">Runs</a>
+  </nav>
 </header>
 <main class="wrap" id="app" aria-live="polite"><p class="muted">Loading…</p></main>
 <footer class="wrap muted small" id="foot"></footer>
+
+<dialog id="modal" class="modal" aria-labelledby="modal-title"></dialog>
+<dialog id="drawer" class="modal drawer" aria-labelledby="drawer-title"></dialog>
+
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
