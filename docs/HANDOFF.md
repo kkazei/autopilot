@@ -4,7 +4,7 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 
 ## 1. Sources of truth
 - **Repo:** the local clone of `autopilot` (Windows 11, PowerShell plus Git Bash).
-  - Remote: `https://github.com/kkazei/autopilot` (private).
+  - Remote: `https://github.com/kkazei/autopilot` (public, MIT licensed).
   - Main branch `master`. Work goes through short branches and pull requests: **PRs #1 to #21 are all merged and no PR is open (Oct 25)**; the history that follows is kept as it was written. PRs #1 to #11 are **merged** (see the Oct 24 update in section 2 for #5 to #11; #13 is merged too, per the user; the list that follows is the Oct 23 state) (#1 all of Day 1-2 code, #2 first learnings, #3 the critic calibration tool, #4 the hand scores, the first partial calibration run and the handoff); **PR #5** (GitHub Actions bumped to v7 for Node 24, plus one bot data commit from its test run) is open. The user merges PRs; Claude does not (the permission checker blocked a merge by Claude).
   - **The GitHub workflow pushes data commits straight to `master`** (author `autopilot[bot]`, message `data: scheduled run <id>`). Run `git pull` before posting or branching, so you have its traces and any learnings it saved.
 - **Build plan (authoritative):** the PDF "Autopilot 3-Day Build Plan and Claude Code Prompts" (30 pages; kept on the builder's disk, not in the repo).
