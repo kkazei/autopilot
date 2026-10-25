@@ -5,7 +5,7 @@ harness's own plan check accept the citation?
 
 **The learning.** `post_fa922d48` (live since 09:27 UTC) was measured live at 11:29 UTC by `run_outer --measure-only`
 (`data/runs/run_20261025_112952_3635b0.json`): 4 likes, 0 reposts, 0 replies, so the analyst model wrote an insight
-(it suggests a clearer call to action). **The likes came from the builder's friends, not an organic audience**, so
+(it suggests a clearer call to action). **The likes came from people the builder knows, not an organic audience**, so
 this shows the measure, learn and cite loop working on real data, not a real audience signal. The analyst's insight
 also reads more into 4 likes on one post than they support.
 
