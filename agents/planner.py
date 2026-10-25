@@ -22,6 +22,11 @@ from harness.schemas import BrandBrief, WeekPlan
 ROLE = "planner"
 PLAN_DAYS = 7
 CITE_RE = re.compile(r"\[learning:([A-Za-z0-9_-]{1,64})\]")
+# Run run_20261024_114318_baec64: the angle "crust that cracks like leather" was invented, and because the writer
+# and critic treated the planned post as fact, the claim passed the fact check. An angle now only names a focus.
+ANGLE_RULE = ("The angle names one thing the brief mentions to focus on (for example \"shaping the loaf\" or "
+              "\"the crust\"). It does not describe how anything looks, smells, tastes, feels or sounds, and makes "
+              "no claim the brief does not make.")
 
 
 class PlanRejected(LLMError):
@@ -35,6 +40,7 @@ Rules:
 - Between 3 and 7 posts, at most one per day, each on a date from today to six days after today (YYYY-MM-DD).
 - Each post: id (a placeholder such as "p1"), day, topic, angle (one concrete detail or technique) and goal
   (exactly one of "awareness", "engagement", "click").
+- {ANGLE_RULE}
 - Plan only things that are in the brand brief: classes, bakes and techniques it names. Do not invent offers, prices or events.
 - If learnings with data are given, use them, and cite each one you use in the rationale as [learning:<post_id>], copying its post_id exactly.
 - A learning that says "Not enough data yet" carries no signal: do not draw conclusions from it.
