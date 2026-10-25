@@ -1,0 +1,134 @@
+[
+  {
+    "ts": "2026-10-25T10:28:26.939706Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_post | topic='Your first loaf comes out of the oven at the Saturday beginner class' goal=click",
+    "summary_out": "start: dry_run=False approval=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:28:29.742315Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 1199 chars]... bread classes.\\\",\\n \\\"audience\\\": \\\"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\\\",\\n \\\"voice\\\": [\\n  \\\"warm\\\",\\n  \\\"unhurried\\\",\\n  \\\"craft-proud\\\"\\n ],\\n \\\"do\\\": [\\n  \\\"Talk about one bake, one technique or one class detail per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_38cd0bfd\\\",\\n \\\"day\\\": \\\"2026-10-25\\\",\\n \\\"topic\\\": \\\"Your first loaf comes out of the oven at the Saturday beginner class\\\",\\n \\\"angle\\\": \\\"the crust\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\nWrite the post.\"}], \"tools\": [\"get_brand_brief\"]}",
+    "summary_out": "tokens in=930 out=7 finish=tool_calls: [{\"type\": \"function\", \"index\": 0, \"id\": \"chatcmpl-tool-7997b246e70b432388052af6a02875ac\", \"function\": {\"name\": \"get_brand_brief\", \"arguments\": \"{}\"}}]",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 2794
+  },
+  {
+    "ts": "2026-10-25T10:28:29.754574Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "writer",
+    "kind": "tool_call",
+    "summary_in": "get_brand_brief | {}",
+    "summary_out": "{\"name\": \"Bramblewick Bakehouse\", \"one_liner\": \"A neighborhood sourdough bakery that teaches small, hands-on weekend bread classes.\", \"audience\": \"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\", \"voice\": [\"warm\", \"unhurried\", \"craft-proud\"], \"do\": [\"Talk about one bake, one technique or one class detail per post\", \"Use concrete sensory details: crust, crumb, flour, the smell of the oven\", \"Make beginners feel welcome; mistakes are part of baking\", \"End with one clear, low-pressure next step\"], \"dont\": [\"Use urgency or scarcity pressure\", \"Make health, nutrition or weight-loss claims\", \"Mention or criticize competitors\", \"Promise results we cannot back up\", \"Use more than two hashtags or any all-caps shouting\"], \"banned_phrases\": [\"act now\", \"limited time only\", \"guaranteed results\", \"best bakery in town\", \"gluten-free\", \"cure\", \"click here\", \"don't miss out\"], \"banned_variants\": [\"results guaranteed\", \"do not miss out\", \"curative\"], \"goal\": \"Drive signups for the Saturday beginner sourdough class.\", \"cta_url\": \"https://example.com/bramblewick/classes\"}",
+    "ok": true,
+    "model": null,
+    "latency_ms": 1
+  },
+  {
+    "ts": "2026-10-25T10:28:34.039387Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 2770 chars]...tool-7997b246e70b432388052af6a02875ac\", \"function\": {\"name\": \"get_brand_brief\", \"arguments\": \"{}\"}}]}, {\"role\": \"tool\", \"tool_call_id\": \"chatcmpl-tool-7997b246e70b432388052af6a02875ac\", \"content\": \"<data name=\\\"tool_result:get_brand_brief\\\">\\n{\\\"name\\\": \\\"Bramblewick Bakehouse\\\", \\\"one_liner\\\": \\\"A neighborhood sourdough bakery that teaches small, hands-on weekend bread classes.\\\", \\\"audience\\\": \\\"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\\\", \\\"voice\\\": [\\\"warm\\\", \\\"unhurried\\\", \\\"craft-proud\\\"], \\\"do\\\": [\\\"Talk about one bake, one technique or one class detail per post\\\", \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\", \\\"Make beginners feel welcome; mistakes are part of baking\\\", \\\"End with one clear, low-pressure next step\\\"], \\\"dont\\\": [\\\"Use urgency or scarcity pressure\\\", \\\"Make health, nutrition or weight-loss claims\\\", \\\"Mention or criticize competitors\\\", \\\"Promise results we cannot back up\\\", \\\"Use more than two hashtags or any all-caps shouting\\\"], \\\"banned_phrases\\\": [\\\"act now\\\", \\\"limited time only\\\", \\\"guaranteed results\\\", \\\"best bakery in town\\\", \\\"gluten-free\\\", \\\"cure\\\", \\\"click here\\\", \\\"don't miss out\\\"], \\\"banned_variants\\\": [\\\"results guaranteed\\\", \\\"do not miss out\\\", \\\"curative\\\"], \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\", \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"}\\n</data>\"}], \"tools\": [\"get_brand_brief\"]}",
+    "summary_out": "tokens in=1249 out=67 finish=stop: {\"text\": \"At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes\"}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 4270
+  },
+  {
+    "ts": "2026-10-25T10:28:38.149221Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "critic",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You are a strict reviewer of social posts for Bramblewick Bakehouse. You do not rewrite the post.\\n\\nScore each dimension from 1 to 5 and give a one-sentence reason for each score.\\n\\nvoice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the \\\"dont\\\" list.\\nclarity: 5 = one idea, readable in 5 seconds, under 300 characters, and about the planned post's topic; the closing call to action alone is not a second ide...[truncated 3111 chars]...se concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_38cd0bfd\\\",\\n \\\"day\\\": \\\"2026-10-25\\\",\\n \\\"topic\\\": \\\"Your first loaf comes out of the oven at the Saturday beginner class\\\",\\n \\\"angle\\\": \\\"the crust\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\n<data name=\\\"draft\\\">\\nAt the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes\\n</data>\\n\\nThe draft is 274 characters. Score it.\"}], \"tools\": []}",
+    "summary_out": "tokens in=1270 out=137 finish=stop: {\"voice\": 5, \"clarity\": 5, \"cta\": 5, \"policy_risk\": 5,\n  \"reasons\": {\"voice\": \"Warm, unhurried, and craft-proud tone with sensory crust detail fits the brief perfectly.\", \"clarity\": \"Focuses on one idea—the crust of the first Saturday class loaf—with a clear, single next step.\", \"cta\": \"One specific, low-pressure action inviting to find the next loaf via the provided link.\", \"policy_risk\": \"No banned phrases, health claims, or unsupported promises; all claims align with the brief and planned post.\"}}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 4099
+  },
+  {
+    "ts": "2026-10-25T10:28:38.158148Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "inner loop post_38cd0bfd attempt 1 | voice=5, clarity=5, cta=5, policy_risk=5",
+    "summary_out": "passed on attempt 1",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:28:38.176529Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_length | At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:28:38.192041Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_banned | At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:28:38.208395Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_rate_cap | At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:28:38.224393Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_duplicate | At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:29:10.180651Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "require_approval | At the Saturday beginner class, your first loaf comes out of the oven with a crust that crackles as it cools—a golden, blistered skin shaped by steam and a little patience. Mistakes happen, and every bake teaches. Find your next loaf: https://example.com/bramblewick/classes",
+    "summary_out": "human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T10:29:10.185211Z",
+    "run_id": "run_20261025_102826_666dc2",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "publish post_38cd0bfd",
+    "summary_out": "blocked: require_approval: human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  }
+]
