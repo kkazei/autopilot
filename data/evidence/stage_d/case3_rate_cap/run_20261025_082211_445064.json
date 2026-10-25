@@ -1,0 +1,24 @@
+[
+  {
+    "ts": "2026-10-25T08:22:11.778927Z",
+    "run_id": "run_20261025_082211_445064",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_post | topic='Free sample loaf with every first class booking' goal=click",
+    "summary_out": "start: dry_run=True approval=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T08:22:11.795052Z",
+    "run_id": "run_20261025_082211_445064",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "rate cap pre-check",
+    "summary_out": "rate cap: 3 posts in the last 24 hours (max 3)",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  }
+]

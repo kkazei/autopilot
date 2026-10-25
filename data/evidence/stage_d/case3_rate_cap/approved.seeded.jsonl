@@ -1,0 +1,3 @@
+{"status": "published", "run_id": "seed_case3_1", "post_id": "post_case3_1", "text": "SEEDED row for stage D case 3 (seed_case3_1); not a real post", "uri": "seed://not-real", "posted_at": "2026-10-25T03:00:00Z", "dry_run": false}
+{"status": "published", "run_id": "seed_case3_2", "post_id": "post_case3_2", "text": "SEEDED row for stage D case 3 (seed_case3_2); not a real post", "uri": "seed://not-real", "posted_at": "2026-10-25T04:30:00Z", "dry_run": false}
+{"status": "published", "run_id": "seed_case3_3", "post_id": "post_case3_3", "text": "SEEDED row for stage D case 3 (seed_case3_3); not a real post", "uri": "seed://not-real", "posted_at": "2026-10-25T06:00:00Z", "dry_run": false}
