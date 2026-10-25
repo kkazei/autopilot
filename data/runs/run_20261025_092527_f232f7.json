@@ -1,0 +1,145 @@
+[
+  {
+    "ts": "2026-10-25T09:25:27.552447Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "run_post | topic='Shaping your first loaf in the Saturday beginner class' goal=click",
+    "summary_out": "start: dry_run=False approval=True min_score=4",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:32.773012Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 1192 chars]...weekend bread classes.\\\",\\n \\\"audience\\\": \\\"Home bakers and curious beginners within 20 minutes of the shop who want a relaxed, social way to learn real bread.\\\",\\n \\\"voice\\\": [\\n  \\\"warm\\\",\\n  \\\"unhurried\\\",\\n  \\\"craft-proud\\\"\\n ],\\n \\\"do\\\": [\\n  \\\"Talk about one bake, one technique or one class detail per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_9b40d962\\\",\\n \\\"day\\\": \\\"2026-10-25\\\",\\n \\\"topic\\\": \\\"Shaping your first loaf in the Saturday beginner class\\\",\\n \\\"angle\\\": \\\"shaping the loaf\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\nWrite the post.\"}], \"tools\": [\"get_brand_brief\"]}",
+    "summary_out": "tokens in=933 out=98 finish=stop: {\"text\": \"This Saturday, we'll work through shaping your first sourdough loaf from bowl to counter. The feel of the dough, the seam you build by folding, and how it holds its shape in the banneton — these small steps become quiet confidence. Our beginner sourdough class runs 10am–1pm, and extra flour is always on hand. One clear next step: save your spot at https://example.com/bramblewick/classes\"}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 5203
+  },
+  {
+    "ts": "2026-10-25T09:25:32.809198Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "writer",
+    "kind": "decision",
+    "summary_in": "invalid Draft from poolside/laguna-s-2.1:free",
+    "summary_out": "repair attempt: text: is 389 characters; the limit is 300",
+    "ok": false,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:36.019520Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "writer",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You write one Bluesky post for Bramblewick Bakehouse.\\n\\nRules:\\n- Sound warm, unhurried, craft-proud. Follow every item in the brief's \\\"do\\\" list.\\n- Never do anything in the brief's \\\"dont\\\" list.\\n- Never use any banned phrase, in any spelling or form: act now; limited time only; guaranteed results; best bakery in town; gluten-free; cure; click here; don't miss out; results guaranteed; do not miss out; curative.\\n- 280 characters or fewer, countin...[truncated 1879 chars]... we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_9b40d962\\\",\\n \\\"day\\\": \\\"2026-10-25\\\",\\n \\\"topic\\\": \\\"Shaping your first loaf in the Saturday beginner class\\\",\\n \\\"angle\\\": \\\"shaping the loaf\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\nWrite the post.\"}, {\"role\": \"assistant\", \"content\": \"{\\\"text\\\": \\\"This Saturday, we'll work through shaping your first sourdough loaf from bowl to counter. The feel of the dough, the seam you build by folding, and how it holds its shape in the banneton — these small steps become quiet confidence. Our beginner sourdough class runs 10am–1pm, and extra flour is always on hand. One clear next step: save your spot at https://example.com/bramblewick/classes\\\"}\"}, {\"role\": \"user\", \"content\": \"Your reply was not a valid Draft JSON object. Errors: text: is 389 characters; the limit is 300\\nKeep the text to 280 characters or fewer.\\nDo not explain or think aloud. Reply with only the corrected JSON object, no other text.\"}], \"tools\": []}",
+    "summary_out": "tokens in=1004 out=59 finish=stop: {\"text\": \"This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes\"}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 3195
+  },
+  {
+    "ts": "2026-10-25T09:25:36.035408Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "writer",
+    "kind": "decision",
+    "summary_in": "repair of Draft",
+    "summary_out": "repair succeeded",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:44.248570Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "critic",
+    "kind": "llm_call",
+    "summary_in": "{\"messages\": [{\"role\": \"system\", \"content\": \"You are a strict reviewer of social posts for Bramblewick Bakehouse. You do not rewrite the post.\\n\\nScore each dimension from 1 to 5 and give a one-sentence reason for each score.\\n\\nvoice: 5 = sounds like the brief's three voice words, nothing off-tone. 1 = generic, or breaks the \\\"dont\\\" list.\\nclarity: 5 = one idea, readable in 5 seconds, under 300 characters, and about the planned post's topic; the closing call to action alone is not a second ide...[truncated 3025 chars]...do\\\": [\\n  \\\"Talk about one bake, one technique or one class detail per post\\\",\\n  \\\"Use concrete sensory details: crust, crumb, flour, the smell of the oven\\\",\\n  \\\"Make beginners feel welcome; mistakes are part of baking\\\",\\n  \\\"End with one clear, low-pressure next step\\\"\\n ],\\n \\\"dont\\\": [\\n  \\\"Use urgency or scarcity pressure\\\",\\n  \\\"Make health, nutrition or weight-loss claims\\\",\\n  \\\"Mention or criticize competitors\\\",\\n  \\\"Promise results we cannot back up\\\",\\n  \\\"Use more than two hashtags or any all-caps shouting\\\"\\n ],\\n \\\"banned_phrases\\\": [\\n  \\\"act now\\\",\\n  \\\"limited time only\\\",\\n  \\\"guaranteed results\\\",\\n  \\\"best bakery in town\\\",\\n  \\\"gluten-free\\\",\\n  \\\"cure\\\",\\n  \\\"click here\\\",\\n  \\\"don't miss out\\\"\\n ],\\n \\\"banned_variants\\\": [\\n  \\\"results guaranteed\\\",\\n  \\\"do not miss out\\\",\\n  \\\"curative\\\"\\n ],\\n \\\"goal\\\": \\\"Drive signups for the Saturday beginner sourdough class.\\\",\\n \\\"cta_url\\\": \\\"https://example.com/bramblewick/classes\\\"\\n}\\n</data>\\n\\n<data name=\\\"planned_post\\\">\\n{\\n \\\"id\\\": \\\"post_9b40d962\\\",\\n \\\"day\\\": \\\"2026-10-25\\\",\\n \\\"topic\\\": \\\"Shaping your first loaf in the Saturday beginner class\\\",\\n \\\"angle\\\": \\\"shaping the loaf\\\",\\n \\\"goal\\\": \\\"click\\\"\\n}\\n</data>\\n\\n<data name=\\\"draft\\\">\\nThis Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes\\n</data>\\n\\nThe draft is 195 characters. Score it.\"}], \"tools\": []}",
+    "summary_out": "tokens in=1265 out=144 finish=stop: {\"voice\": 5, \"clarity\": 5, \"cta\": 5, \"policy_risk\": 5,\n  \"reasons\": {\n    \"voice\": \"Warm, unhurried, and craft-proud tone fits the brief's voice perfectly with concrete shaping details.\",\n    \"clarity\": \"One clear idea about shaping in the class, readable quickly, stays on topic with the planned post.\",\n    \"cta\": \"One specific, low-pressure next step to save a spot with direct link.\",\n    \"policy_risk\": \"No banned phrases, urgency, or unsupported claims; all details align with the brief and topic.\"\n  }\n}",
+    "ok": true,
+    "model": "poolside/laguna-s-2.1:free",
+    "latency_ms": 8197
+  },
+  {
+    "ts": "2026-10-25T09:25:44.260508Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "inner loop post_9b40d962 attempt 1 | voice=5, clarity=5, cta=5, policy_risk=5",
+    "summary_out": "passed on attempt 1",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:44.276914Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_length | This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:44.292596Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_banned | This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:44.310109Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_rate_cap | This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:25:44.324613Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "check_duplicate | This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes",
+    "summary_out": "pass",
+    "ok": true,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:26:15.773143Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "guardrail",
+    "summary_in": "require_approval | This Saturday we'll shape your first sourdough loaf from bowl to banneton. One seam, one fold at a time. 10am-1pm class, extra flour ready. Save your spot: https://example.com/bramblewick/classes",
+    "summary_out": "human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  },
+  {
+    "ts": "2026-10-25T09:26:15.781139Z",
+    "run_id": "run_20261025_092527_f232f7",
+    "agent": "harness",
+    "kind": "decision",
+    "summary_in": "publish post_9b40d962",
+    "summary_out": "blocked: require_approval: human reviewer did not approve",
+    "ok": false,
+    "model": null,
+    "latency_ms": null
+  }
+]
