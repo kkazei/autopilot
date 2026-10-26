@@ -1,4 +1,4 @@
-# Autopilot handoff, final (2026-10-25, about 12:35 UTC): the build is finished; see "Final state" in section 2
+# Autopilot handoff (2026-10-26, about 10:15 UTC): the build is finished; read "Oct 26 update" first, then "Final state", in section 2
 
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
@@ -15,7 +15,25 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 
 ## 2. Where we are (one-screen summary)
 
-### Final state (Oct 25, about 12:35 UTC; read this first)
+### Oct 26 update (about 10:15 UTC; read this first; it supersedes the Oct 25 statements below wherever they differ)
+**Repo.** `master` is at the merge of PR #27 or later. Both PRs below are merged and no code PR is open. Tests: 546 on Python 3.11 (541 plus 5 new), CI green.
+- **#26, re-measuring.** `harness/measure.py` used to skip any post that already had a learning, so the fixed "Not enough data yet" line closed a post for good. A post whose only learning is that line is now read again on later runs. Under 2 engagements nothing is written (the file does not fill with repeated lines); at 2 or more the analyst's learning is appended and the old line stays. The export shows only the newest learning per post. It was built as code, not by hand-editing `learnings.jsonl` (decision 4.19).
+- **#27, dashboard (front-end only; the export and the data are unchanged).** The Runs list says what the person did: `human ✓`, `declined by human`, `blocked by code`, `no human answer`, `approval off`, and one `approved · publish failed` badge for the approved post whose Bluesky call timed out. The run dialog opens with a "Human approval" box (the wait before the yes, or the declined draft with the critic's scores) and lists the steps as plain sentences under phase headings, newest first, with the raw input and output one click away. Times show in the viewer's own time zone. A count of "issues" replaces "failed steps". Learnings moved from a side column into a full-width "What the system learned" section under Posts. No real run has been blocked by code yet, so "blocked by code" was only checked on a synthetic trace. The JS has no automated tests.
+- **Phone check:** the user reported on Oct 26 that the dashboard works on a real phone (whether that was the live site or the #27 preview was not stated).
+
+**The two oldest posts now have likes.** They had 0 when first read on Oct 23 and now have 2 and 3, from people the user knows. Their learnings are still the "not enough data" line until a measuring run reads them again. That happens either on the next scheduled run or on a manual `run_outer --measure-only` (a Bluesky read plus up to 2 OpenRouter requests). After that the dashboard should show 3 of 3 learnings with signal. Then update the hand-maintained "what is partial" note in `scripts/export_dashboard_data.py` and the README (its next-steps list still names re-measuring as not built). Keep the phrase "people the builder knows": a test requires it.
+
+**Scheduled run.** The cron is 06:17 UTC. Runs fired at 10:58 on Oct 24 (about 4h40m late) and 11:26 on Oct 25 (about 5h10m late); at 10:13 UTC on Oct 26 none had fired. GitHub does not guarantee scheduled start times, and the cause is not diagnosed. The user decided to leave it (decision 4.18): it only measures, so the time does not matter. The repo is public; the commit that marks it public is `e13d9fe` (13:20 UTC on Oct 25), after the second scheduled run, and the exact switch time is not visible, so today's may be the first scheduled run since it went public. Visibility is not a known cause of the delay.
+
+**Quota at 09:56 UTC:** the repo count is 19 in the last 24 hours; the 8 stage F scratch requests from Oct 25 are still inside the window, so the real figure is about 27 of 50. A plan costs 1 to 3 requests on a good day (the planner's attempt budget is 12 on a bad one).
+
+**Model chain: replacing poolside's `laguna` (deadline Oct 31, not done).** OpenRouter's public models list (read on Oct 26, no quota) shows both `poolside/laguna-s-2.1:free` and `laguna-xs-2.1:free` expiring 2026-10-31. It lists 17 free text models with tool calling and at least 64K context. Candidates: `nvidia/nemotron-3-ultra-550b-a55b:free` (already in the chain, produced the Oct 25 plan, not tested as a critic), `nvidia/nemotron-3-super-120b-a12b:free` (404 on Oct 23, listed again), `nvidia/nemotron-3.5-super-vl:free`, `nvidia/nemotron-3.5-lightning:free`, and the inkling models (403 on Day 1). Models that cannot serve as critic or writer: the Baseten decision models (probability output only, no text) and the NVIDIA embedding models. Proposed chain: nemotron-3-ultra, flint, gemma-4-31b, plus nemotron-3-super if its probe passes. Steps: probe about 2 requests after roughly 12:00 UTC, edit only the `OPENROUTER_MODELS` line of `.env`, set the GitHub secret of the same name from `.env` with the value never printed, then update decision 4.9. The user will run the probe later. A new critic is uncalibrated: the 7 of 10 agreement figure describes poolside only.
+
+**Left:** the model swap before Oct 31; the learnings for the two posts and the text that follows them; the user's backup video and two rehearsals. Optional next steps are unchanged (a draft queue with a one-click approval page, a code check for times, prices and numbers not in the brief, an automatic server check after a publish timeout).
+
+**Local-only files:** `docs/DEMO.md` (updated for the new dashboard and the re-measure) and `docs/ISSUES_LOG.md` (now has the Oct 25 and Oct 26 entries) were updated on Oct 26. Copies are in the Oct 26 session scratchpad; the user should keep their own.
+
+### Final state (Oct 25, about 12:35 UTC)
 **Done.** Every evidence stage is closed (table below). Live posts end at 3 (one new today). The dashboard is live and rebuilds itself on every push to `master`, including the scheduled bot's pushes (seen at 11:27 UTC).
 
 **Git.** **`master` is the only branch**, locally and on GitHub, at the merge of PR #21 or later; no PR is open. Today's PRs, all merged by the user: #15 the planner-angle prompt fix, #16 the morning data and stage D evidence, #17 the writer's repair target of 240, #18 the dashboard visual refresh (ui-ux-pro-max skill, CSS and two HTML lines), #19 the afternoon data and stage F evidence, #20 the final docs and the dashboard's partial list (and the removal of `docs/DEMO.md` from the repo), #21 the model-chain secret note. After the merges, every other branch was deleted (21 on GitHub, each checked to be merged into `master` first; 3 local, including `docs/calibration-complete-text` with its never-to-be-pushed sample-trace commit `5ea175e`, and the old `pr9-fix` worktree). A merged PR's page can restore its branch if ever needed. Tests: 541 on Python 3.11 and 3.14, CI green.
@@ -207,6 +225,9 @@ Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by 
 15. **Stage B (Oct 24):** the real-model `run_outer` was a dry run with `--dry-run --no-approve` on a scratch copy of `data/`, run by Claude, at the user's choice (the alternative, a live run with approval on, was not chosen). Dry runs publish only to a `dryrun://` URI.
 16. **Pull requests (Oct 24):** the merge commit rule still holds; data PRs stay separate from code PRs and from docs PRs. No attribution trailers (CLAUDE.md overrides any tool-suggested trailer).
 17. **Oct 25 decisions:** stage D forces cases 3, 7 and 4 only (case 1 skipped); issue 39 gets the small prompt fix; issue 40 is documented, not tuned; the dashboard is hosted on Cloudflare; stage D evidence lives in `data/evidence/stage_d/`, outside `data/runs`, so the dashboard and quota count never mix it with real runs.
+18. **Scheduled run timing (Oct 26):** leave the cron as it is. In the demo say "daily, usually around midday UTC", not "at 06:17".
+19. **Re-measuring (Oct 26):** a post whose only learning is "not enough data" is read again; the old line stays and the newest learning per post is shown. Built as code (PR #26), not by hand-editing `data/learnings.jsonl`.
+20. **Dashboard wording (Oct 26):** say "issues", not "failed steps" or "errors on the way", so a step count is never confused with a run that failed. A decline is not an issue.
 
 ## 5. Task list
 ### Day 1 (done)
