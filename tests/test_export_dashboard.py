@@ -103,6 +103,19 @@ def test_learnings_flag_whether_they_have_signal(data):
     assert out["overview"]["learnings_with_signal"] == 1
 
 
+def test_a_post_re_measured_later_shows_only_its_newest_learning(data):
+    write_jsonl(data / "learnings.jsonl", [
+        {"run_id": "r1", "post_id": "p1", "metrics": {"likes": 0}, "insight": "Not enough data yet: x",
+         "saved_at": "2026-10-23T10:00:00+00:00"},
+        {"run_id": "r2", "post_id": "p1", "metrics": {"likes": 2}, "insight": "Two likes suggest the angle works.",
+         "saved_at": "2026-10-26T10:00:00+00:00"},
+        {"run_id": "r1", "post_id": "p2", "metrics": {"likes": 0}, "insight": "Not enough data yet: x",
+         "saved_at": "2026-10-23T10:00:01+00:00"}])
+    out = export.build(data)
+    assert [(l["post_id"], l["has_signal"]) for l in out["learnings"]] == [("p1", True), ("p2", False)]
+    assert (out["overview"]["learnings"], out["overview"]["learnings_with_signal"]) == (2, 1)
+
+
 def test_runs_are_summarised_and_an_unreadable_trace_is_reported_not_fatal(data):
     (data / "runs" / "run_a.json").write_text(json.dumps([
         event("start", summary_in="run_post"), event("m", kind="llm_call"), event("published", ok=True)]), "utf-8")
