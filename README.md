@@ -64,7 +64,7 @@ Run these in a real terminal: the approval prompt needs a keyboard. Models are l
 
 **Proven for real**
 - 3 live posts on Bluesky, each human-approved, with full traces. Four more drafts were declined at the approval prompt (an invented class time, invented crust details, invented scarcity, and one claim about customers), and their traces are kept too.
-- The learn loop on real data: a live post was measured (4 likes, **from people the builder knows, not an organic audience**), the analyst saved a learning, and a real planner cited it in a plan that passed the harness's check (`data/evidence/stage_f`). The two earlier posts had zero engagement, so their learnings say "not enough data".
+- The learn loop on real data: a live post was measured (4 likes, **from people the builder knows, not an organic audience**), the analyst saved a learning, and a real planner cited it in a plan that passed the harness's check (`data/evidence/stage_f`). The two earlier posts had zero engagement when first read, so they were saved as "not enough data"; they were read again on Oct 26 (2 likes and 1 repost, 3 likes and 1 repost; the likes are from people the builder knows, the reposts are unverified) and the analyst saved a learning for each (`run_20261026_101942_a284db`). That second read is the re-measuring step added in PR #26.
 - The scheduled GitHub run fired on its own on Oct 24 and Oct 25 (hours after its 06:17 UTC slot each time) and succeeded. It only measures and can never publish. Its data push rebuilds the dashboard with nobody involved. CI runs the tests on every pull request.
 - The planner and the write-and-critique half of the outer loop ran on real free models, as a dry run (plan, draft, a length repair, critique, all guardrails, a `dryrun://` publish).
 - A Bluesky timeout after sending: the pending row blocked a retry, the account's server showed no post, and the row was settled by hand without editing history (`run_20261025_103042_bfa092`).
@@ -74,7 +74,7 @@ Run these in a real terminal: the approval prompt needs a keyboard. Models are l
 
 **Partial or not proven yet**
 - **The critic is the weak link.** Calibration on 10 hand-scored drafts: it agreed on 6 of 10 and was too lenient on d03, d06, d08 and d10. One rubric change raised that to 7 of 10, which is one draft and within run-to-run noise, measured on the same 10 drafts. It is still lenient on d03, d06 and d10. On real drafts it scored an invented class time, invented crust details, a claim about customers and urgency pressure 5 out of 5, and it noticed invented scarcity ("a few spots remain") but still passed it at 4. Human approval caught each one, which is why approval stays mandatory.
-- **No organic engagement.** The one learning with signal comes from likes by people the builder knows, and the plan's use of it is shallow. The plan citing it was shown once, with the planner alone, after a first attempt failed on free-model errors.
+- **No organic engagement.** Every learning with signal comes from likes by people the builder knows (two reposts are unverified), and the one plan that cited a learning used it shallowly. That plan was shown once, with the planner alone, after a first attempt failed on free-model errors. The analyst's wording can also go further than three likes support: one learning says a post "resonated modestly with a niche audience".
 - **The free writer often overshoots the 300-character limit.** On Oct 25, 4 of 8 one-shot repairs failed. The repair now aims at 240 (PR #17); that is unproven on a real model.
 - **The planner's angle was a source of invented claims** (stage B). The prompts now treat the angle as a focus, not as a fact (PR #15). That is tested offline only. The calibration numbers above were measured on the critic prompt before that change.
 - **Failure forcing on a real model is partial** (`data/evidence/stage_d/README.md`). Prompt injection was resisted, but the run stopped at a length repair before the critic. The banned phrase was not forced: the writer avoided it, and approval caught the urgency instead. The revision cap was not forced: the free critic is too lenient to fail three times on demand.
@@ -93,9 +93,7 @@ Next steps, in order:
    same harness checks as today's terminal prompt. Posting gets close to autonomous while the human check stays.
 2. **A code check for times, prices and numbers that are not in the brief.** It would have caught the invented class
    time without relying on the critic.
-3. **Measure "not enough data" posts again later.** Each post is measured once today, so a post measured early keeps
-   its first reading.
-4. **Check the account's server automatically after a publish timeout**, instead of leaving "outcome unknown" for a human to settle by hand.
-5. **Replace poolside's `laguna` model id** before it expires on Oct 31, and recalibrate the critic on fresh drafts.
+3. **Check the account's server automatically after a publish timeout**, instead of leaving "outcome unknown" for a human to settle by hand.
+4. **Replace poolside's `laguna` model id** before it expires on Oct 31, and recalibrate the critic on fresh drafts.
 
 Details and decisions: `docs/HANDOFF.md`. To see it in action: the dashboard, and `python -m scripts.demo_bad_brief`. Deploying the workflow and the dashboard: `docs/DEPLOY.md`.
