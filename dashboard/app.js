@@ -24,7 +24,10 @@ function h(tag, props, ...children) {
   return node;
 }
 
-const badge = (text, kind) => h("span", { class: "badge" + (kind ? " " + kind : "") }, text);
+// A badge made of a glyph gets a spoken label; the others already read as words.
+const badge = (text, kind, spoken) => h("span", { class: "badge" + (kind ? " " + kind : ""), role: spoken ? "img" : null, "aria-label": spoken || null }, text);
+// A decline is the system working as intended, not a failed step, so it is not counted as one.
+const isFailure = (e) => !e.ok && !/human reviewer did not approve/.test(e.summary_out || "");
 const when = (iso) => (iso ? iso.slice(0, 19).replace("T", " ") + " UTC" : "");
 const clock = (iso) => (iso ? iso.slice(11, 19) : "");
 const day = (iso) => (iso ? iso.slice(0, 16).replace("T", " ") + " UTC" : "unknown time");
@@ -74,7 +77,7 @@ function pipeline() {
   const steps = ["Planner", "Writer", "Critic", "Harness checks", "Human yes", "Bluesky", "Analyst"];
   return h("section", { class: "flow card", "aria-label": "How it works" },
     h("ol", { class: "steps" }, steps.map((s, i) => h("li", null, h("span", { class: i === 3 || i === 4 ? "gate" : null }, s)))),
-    h("p", { class: "muted small" }, "The harness, not the models, decides whether a post may go out. Publishing needs a human yes, every model and tool call is traced, and the analyst's learnings feed the next plan."));
+    h("p", { class: "muted small" }, "The harness, not the models, decides whether a post may go out. Publishing needs a human yes, asked last, so nobody is shown a draft that fails a code check. Every model and tool call is traced, and the analyst's learnings feed the next plan."));
 }
 
 function postCard(p) {
@@ -124,15 +127,70 @@ function runOutcome(r) {
   return [f ? "ended" : "no decision", null];
 }
 
+// The harness asks a person last, so the require_approval row is the record of what the person did. Nothing is
+// guessed: a run with no such row and no failed code check has no approval story, and a run whose approval was
+// switched off says so instead of claiming a human said yes.
+const secondsBetween = (a, b) => {
+  const s = (Date.parse(String(b).slice(0, 19) + "Z") - Date.parse(String(a).slice(0, 19) + "Z")) / 1000;
+  return Number.isFinite(s) && s >= 0 ? Math.round(s) : null;
+};
+
+function approvalOf(r) {
+  const evs = r.events;
+  const i = evs.findIndex((e) => e.kind === "guardrail" && /^require_approval\b/.test(e.summary_in || ""));
+  if (i < 0) {
+    const codeStopped = /^blocked/.test(r.final || "") && evs.some((e) => e.kind === "guardrail" && !e.ok);
+    return codeStopped ? { state: "code" } : null;
+  }
+  const e = evs[i];
+  const out = e.summary_out || "";
+  if (/^skipped/.test(out)) return { state: "code" };
+  if (/approval disabled/.test(out)) return { state: "off" };
+  if (e.ok) return { state: "approved", seconds: i > 0 ? secondsBetween(evs[i - 1].ts, e.ts) : null };
+  if (!/did not approve/.test(out)) return { state: "noanswer" };
+  const draft = (e.summary_in || "").replace(/^require_approval \| /, "");
+  const row = evs.slice(0, i).reverse().find((x) => /^inner loop \S+ attempt \d+ \| /.test(x.summary_in || ""));
+  const scores = {};
+  for (const m of (row ? row.summary_in.split(" | ")[1] : "").matchAll(/(\w+)=(\d)/g)) scores[m[1]] = Number(m[2]);
+  return { state: "declined", draft, scores: Object.keys(scores).length ? scores : null };
+}
+
+function runBadges(r) {
+  const out = runOutcome(r);
+  const ap = approvalOf(r);
+  if (!ap) return [out];
+  if (ap.state === "declined") return [["declined by human", "warn"]];
+  if (ap.state === "code") return [["blocked by code", "warn"]];
+  if (ap.state === "noanswer") return [["no human answer", "warn"]];
+  if (ap.state === "off") return [out, ["approval off", "warn"]];
+  return [out, ["human ✓", "ok", "approved by a human"]];
+}
+
+const APPROVAL_TEXT = {
+  approved: (ap) => `Approved by a person${ap.seconds != null ? ` after ${ap.seconds}s` : ""}. The code checks passed first, then a person said yes.`,
+  declined: () => "Declined by a person. The code checks passed, the person said no, and nothing was published.",
+  code: () => "Blocked by code before anyone was asked. A draft that fails a check is never shown for approval.",
+  off: () => "Approval was switched off for this run, so no person was asked.",
+  noanswer: () => "No person answered (the terminal had no input), so nothing was published.",
+};
+
+function approvalBlock(ap) {
+  if (!ap) return null;
+  return h("div", { class: "approval card" },
+    h("h3", null, "Human approval"),
+    h("p", null, APPROVAL_TEXT[ap.state](ap)),
+    ap.state === "declined" && ap.draft ? [h("p", { class: "muted small" }, "The draft that was declined:"), h("blockquote", { class: "post-text" }, ap.draft)] : null,
+    ap.state === "declined" && ap.scores ? [h("p", { class: "muted small" }, "The critic's scores for it:"), scoreBars(ap.scores, true)] : null);
+}
+
 function runRow(r) {
   const t = runTitle(r);
-  const [label, kind] = runOutcome(r);
-  const failed = r.events.filter((e) => !e.ok).length;
+  const failed = r.events.filter(isFailure).length;
   return h("li", null, h("button", { type: "button", class: "run-row", onclick: () => openRun(r) },
     h("span", { class: "run-when muted small" }, shortDay(r.started)),
     h("span", { class: "run-main" }, h("span", { class: "run-kind" }, t.kind), h("span", { class: "run-title" }, t.title)),
     h("span", { class: "run-stats muted small" }, `${r.llm_calls} model · ${failed} failed step${failed === 1 ? "" : "s"}`),
-    h("span", { class: "run-out" }, badge(label, kind))));
+    h("span", { class: "run-out" }, runBadges(r).map(([label, kind, spoken]) => badge(label, kind, spoken)))));
 }
 
 function runsSection() {
@@ -193,11 +251,12 @@ function openPost(p) {
 
 function openRun(r) {
   const t = runTitle(r);
-  const [label, kind] = runOutcome(r);
+  const badges = runBadges(r);
+  const approval = approvalBlock(approvalOf(r));
   const list = h("div", null);
   // Only the step list is redrawn, so the checkbox keeps focus when toggled.
   const fill = (problemsOnly) => {
-    const shown = r.events.filter((e) => !problemsOnly || !e.ok);
+    const shown = r.events.filter((e) => !problemsOnly || isFailure(e));
     list.replaceChildren(shown.length ? h("ol", { class: "events" }, shown.map(eventRow)) : empty("No failed steps in this run."));
   };
   const box = h("input", { type: "checkbox", id: "problems", onchange: (e) => { setSessionFlag("problems", e.target.checked); fill(e.target.checked); } });
@@ -207,7 +266,8 @@ function openRun(r) {
   show(drawer, [
     dialogHead("drawer-title", t.title, `${t.kind} · ${day(r.started)}`, drawer),
     h("div", { class: "dlg-body" },
-      h("div", { class: "meta" }, badge(label, kind), badge(r.ok ? "no failed steps" : "has failed steps", r.ok ? "ok" : "warn")),
+      h("div", { class: "meta" }, badges.map(([label, kind, spoken]) => badge(label, kind, spoken)), badge(r.events.some(isFailure) ? "has failed steps" : "no failed steps", r.events.some(isFailure) ? "warn" : "ok")),
+      approval,
       h("dl", { class: "runsummary" },
         h("dt", null, "Started"), h("dd", null, when(r.started)),
         h("dt", null, "Began"), h("dd", null, r.start),

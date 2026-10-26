@@ -206,7 +206,10 @@ ul.post-grid, ul.learnings, ul.runs, ul.limits { list-style: none; margin: 0; pa
 .run-kind { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
 .run-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
 .run-stats { grid-area: stats; text-align: right; }
-.run-out { grid-area: out; justify-self: end; }
+.run-out { grid-area: out; justify-self: end; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 12rem; }
+.run-out .badge { font-size: 0.75rem; }
+.approval { margin: 12px 0; padding: 12px 14px; }
+.approval p { margin: 0 0 8px; }
 .ghost {
   margin-top: 10px; min-height: 40px; padding: 0 14px; cursor: pointer;
   border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface);
