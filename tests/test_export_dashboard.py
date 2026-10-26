@@ -164,7 +164,7 @@ def test_the_overview_says_what_is_partial(data):
         "- Drafts: 10 in the file, 7 scored by the critic, 10 with your scores\n", "utf-8")
     partial = " ".join(export.build(data)["overview"]["partial"])
     for fragment in ("7 of 10", "scheduled", "planner", "real model", "people the builder knows"):
-        assert fragment in partial  # the one learning with signal must never read as organic engagement
+        assert fragment in partial  # learnings with signal must never read as organic engagement
 
 
 def test_a_complete_calibration_report_states_the_result(data):
