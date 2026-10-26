@@ -109,7 +109,10 @@ def _read_learnings(data_dir: Path, tracked: set[Path] | None) -> list[dict]:
             "insight": r.get("insight", ""), "saved_at": r.get("saved_at"),
             "has_signal": not str(r.get("insight", "")).startswith(_NO_SIGNAL)} for r in rows]
     out.sort(key=lambda r: r["saved_at"] or "", reverse=True)
-    return out
+    # A post can carry an old "not enough data" line and, once likes arrive, a newer learning. Only the newest is
+    # shown, so the counts stay one learning per post instead of counting the superseded line.
+    seen: set = set()
+    return [r for r in out if not (r["post_id"] in seen or seen.add(r["post_id"]))]
 
 
 def _read_runs(data_dir: Path, tracked: set[Path] | None) -> tuple[list[dict], list[str]]:

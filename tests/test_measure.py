@@ -134,6 +134,46 @@ def test_a_post_with_a_learning_is_not_measured_again(run_id, reads):
     assert reads == []
 
 
+NOT_ENOUGH = {"insight": measure.NOT_ENOUGH_DATA_INSIGHT, "metrics": {"likes": 0, "reposts": 0, "replies": 0}}
+
+
+def test_a_post_whose_only_learning_is_not_enough_data_is_measured_again(run_id, reads):
+    add_published("post_aaaa1111")
+    add_learning("post_aaaa1111", **NOT_ENOUGH)
+    reads.result = {"likes": 2, "reposts": 0, "replies": 0}
+    llm = MockLLM([insight_json("Two likes suggest the angle works.")])
+    result = measure.measure_posts(llm, run_id, NOW, dry_run=False)
+    assert result.learned == ["post_aaaa1111"] and len(llm.calls) == 1
+    old, new = learnings()  # the old line stays; the new one is appended after it
+    assert old["insight"] == measure.NOT_ENOUGH_DATA_INSIGHT
+    assert (new["insight"], new["metrics"]["likes"]) == ("Two likes suggest the angle works.", 2)
+
+
+def test_a_still_thin_post_is_read_but_nothing_is_written_again(run_id, reads):
+    add_published("post_aaaa1111")
+    add_learning("post_aaaa1111", **NOT_ENOUGH)
+    reads.result = {"likes": 1, "reposts": 0, "replies": 0}
+    llm = MockLLM([])
+    result = measure.measure_posts(llm, run_id, NOW, dry_run=False)
+    assert len(reads) == 1 and llm.calls == [] and result.learned == []
+    assert len(learnings()) == 1 and "still under" in result.skipped[0]
+
+
+def test_a_re_measured_post_is_done_and_is_not_read_a_third_time(run_id, reads):
+    add_published("post_aaaa1111")
+    add_learning("post_aaaa1111", **NOT_ENOUGH)
+    measure.measure_posts(MockLLM([insight_json()]), run_id, NOW, dry_run=False)
+    measure.measure_posts(MockLLM([]), run_id, NOW, dry_run=False)
+    assert len(reads) == 1 and len(learnings()) == 2
+
+
+def test_a_dry_run_reads_nothing_for_a_thin_post(run_id, reads):
+    add_published("post_aaaa1111")
+    add_learning("post_aaaa1111", **NOT_ENOUGH)
+    measure.measure_posts(MockLLM([]), run_id, NOW, dry_run=True)
+    assert reads == [] and len(learnings()) == 1
+
+
 def test_not_found_is_logged_without_a_learning_and_given_up_after_three_runs(run_id, reads):
     add_published("post_aaaa1111")
     reads.result = bluesky.BlueskyNotFound("gone")

@@ -3,6 +3,10 @@
 The harness decides which posts to read, reads the counts itself and validates them; the analyst is only a
 function it calls when there is enough signal to say something. Nothing here retries or sleeps: a failed
 read is traced and the run moves on, because the next scheduled run is the retry.
+
+A post whose only learning is "not enough data" is read again on later runs: engagement can arrive days after the
+first read. If it is still under the threshold nothing is written (the old line stands, and the file does not
+fill with identical lines); once it crosses the threshold the analyst's learning is appended and the post is done.
 """
 
 from __future__ import annotations
@@ -66,7 +70,9 @@ def measure_posts(llm: LLM, run_id: str, now: datetime, *, dry_run: bool, budget
         result.stopped = f"learnings.jsonl has {invalid} unreadable line(s); no learnings written this run"
         trace.log_event(run_id, "harness", "decision", "measure", f"warning: {result.stopped}", ok=False)
         return result
-    learned_ids = {r.get("post_id") for r in learnings}
+    # "Learned" means a learning with signal. A post that only has the fixed "not enough data" line is still open.
+    learned_ids = {r.get("post_id") for r in learnings if r.get("insight") != NOT_ENOUGH_DATA_INSIGHT}
+    thin_ids = {r.get("post_id") for r in learnings} - learned_ids
     outcomes, _ = read_jsonl(trace.data_dir() / MEASUREMENTS_FILE)
     not_found: dict[str, int] = {}
     for o in outcomes:
@@ -118,8 +124,13 @@ def measure_posts(llm: LLM, run_id: str, now: datetime, *, dry_run: bool, budget
                             "error: metrics missing likes, reposts or replies as non-negative integers; no learning",
                             ok=False)
             continue
+        enough = sum(metrics.values()) >= MIN_ENGAGEMENT
+        if not enough and post_id in thin_ids:
+            # Its "not enough data" line already says this; writing it again on every run would only pad the file.
+            result.skipped.append(f"{post_id}: still under {MIN_ENGAGEMENT} engagements; the earlier learning stands")
+            continue
         try:
-            if sum(metrics.values()) < MIN_ENGAGEMENT:
+            if not enough:
                 learning = Learning(run_id=run_id, post_id=post_id, metrics=metrics,
                                     insight=NOT_ENOUGH_DATA_INSIGHT)  # no model call, no quota
             else:
