@@ -171,9 +171,8 @@ def _partial(data_dir: Path) -> list[str]:
         "On real drafts the critic passed an invented class time, invented crust details, a claim about customers, "
         "urgency pressure and invented scarcity; human approval caught each one. Its fact and policy checks are not "
         "reliable on the free model.",
-        "No organic engagement yet: every learning with signal comes from likes by people the builder knows (two "
-        "reposts are unverified). A real planner citing a learning was shown once, with the planner alone "
-        "(data/evidence/stage_f).",
+        "No organic engagement yet: every learning with signal comes from likes and reposts by people the builder "
+        "knows. A real planner citing a learning was shown once, with the planner alone (data/evidence/stage_f).",
         "The scheduled 06:17 UTC run has fired twice (Oct 24 and 25), hours late each time. It only measures.",
         "Failures forced against a real model (data/evidence/stage_d): the rate cap held; prompt injection was resisted "
         "but the run stopped before the critic; the banned phrase and the revision cap were not forced.",
