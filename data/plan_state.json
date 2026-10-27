@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "plans": [
+    {
+      "plan_id": "plan_2eaeabe9",
+      "run_id": "run_20261026_135423_fd25db",
+      "week_of": "2026-10-26",
+      "rationale": "Five posts across the week (Mon–Sat) each spotlight one technique or class detail from the brief. Monday and Wednesday use engagement goals to build community around starter care and the beginner moment that resonated modestly in post_2283a2b4 [learning:post_2283a2b4]. Tuesday raises awareness with a shaping detail. Thursday and Saturday drive clicks toward the class signup page, applying the insight from post_fa922d48 and post_b97bd440 that clearer, benefit-forward CTAs are needed [learning:post_fa922d48, learning:post_b97bd440]. All angles name concrete, brief-mentioned details (feeding starter, bench rest, dough pulling away, crust cracking, shared bench) without sensory claims or invented offers.",
+      "created_at": "2026-10-26T13:54:23.435666Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": "post_365bd515",
+      "plan_id": "plan_2eaeabe9",
+      "day": "2026-10-26",
+      "topic": "starter maintenance",
+      "angle": "feeding the starter",
+      "goal": "engagement",
+      "status": "published",
+      "runs_failed": 1,
+      "uri": "at://did:plc:ogjf457tkxqfttvdsfbvjl7p/app.bsky.feed.post/3myrvdzcz3a2u",
+      "history": [
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "planned",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "planned"
+        },
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "carried_forward",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "run request cap reached"
+        },
+        {
+          "run_id": "run_20261026_135856_86a792",
+          "status": "carried_forward",
+          "at": "2026-10-26T13:58:56.889691Z",
+          "reason": "no draft: LLMBudgetExceeded: critic: upstream attempt budget of 4 used up"
+        },
+        {
+          "run_id": "run_20261026_140501_39006f",
+          "status": "published",
+          "at": "2026-10-26T14:05:01.788269Z",
+          "reason": "published"
+        }
+      ]
+    },
+    {
+      "id": "post_d1104ff3",
+      "plan_id": "plan_2eaeabe9",
+      "day": "2026-10-27",
+      "topic": "shaping technique",
+      "angle": "bench rest before shaping",
+      "goal": "awareness",
+      "status": "blocked",
+      "runs_failed": 0,
+      "uri": null,
+      "history": [
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "planned",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "planned"
+        },
+        {
+          "run_id": "run_20261027_061256_1c33ca",
+          "status": "blocked",
+          "at": "2026-10-27T06:12:56.866509Z",
+          "reason": "blocked: require_approval: human reviewer did not approve"
+        }
+      ]
+    },
+    {
+      "id": "post_6b0ad6ec",
+      "plan_id": "plan_2eaeabe9",
+      "day": "2026-10-28",
+      "topic": "class moment",
+      "angle": "watching dough pull away from the bowl",
+      "goal": "engagement",
+      "status": "planned",
+      "runs_failed": 0,
+      "uri": null,
+      "history": [
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "planned",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "planned"
+        }
+      ]
+    },
+    {
+      "id": "post_ec53c6d2",
+      "plan_id": "plan_2eaeabe9",
+      "day": "2026-10-29",
+      "topic": "bake result",
+      "angle": "the crust cracking as it cools",
+      "goal": "click",
+      "status": "planned",
+      "runs_failed": 0,
+      "uri": null,
+      "history": [
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "planned",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "planned"
+        }
+      ]
+    },
+    {
+      "id": "post_459614bc",
+      "plan_id": "plan_2eaeabe9",
+      "day": "2026-11-01",
+      "topic": "class day",
+      "angle": "the shared bench space in class",
+      "goal": "click",
+      "status": "planned",
+      "runs_failed": 0,
+      "uri": null,
+      "history": [
+        {
+          "run_id": "run_20261026_135423_fd25db",
+          "status": "planned",
+          "at": "2026-10-26T13:54:23.435666Z",
+          "reason": "planned"
+        }
+      ]
+    }
+  ]
+}
