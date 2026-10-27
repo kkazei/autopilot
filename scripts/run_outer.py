@@ -50,34 +50,36 @@ def _say(message: str) -> None:
 
 def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
          input_fn: Callable[[str], str] = input, now: datetime | None = None,
-         clock: Clock | None = None, env_file: Path | None = DEFAULT_ENV_FILE) -> int:
-    """Tests inject `llm`, `input_fn` and `now` or `clock`, and pass env_file=None so the real .env never loads."""
+         clock: Clock | None = None, env_file: Path | None = DEFAULT_ENV_FILE,
+         say: Callable[[str], None] = _say) -> int:
+    """Tests inject `llm`, `input_fn` and `now` or `clock`, and pass env_file=None so the real .env never loads.
+    The local app (ui/) passes its own `say`, so a run's messages reach its log instead of the console."""
     args = parse_args(argv)
     if not args.approve and not args.dry_run:
-        _say("refused: --no-approve is only allowed together with --dry-run")
+        say("refused: --no-approve is only allowed together with --dry-run")
         return EXIT_REFUSED
     if env_file is not None:
         load_dotenv(env_file)
     if clock is None:
         clock = (lambda: now) if now is not None else utc_now
     if args.requeue:
-        return requeue_post(args.requeue, _say, clock)
+        return requeue_post(args.requeue, say, clock)
     try:
         brief = BrandBrief.model_validate_json((trace.data_dir() / "brand_brief.json").read_text(encoding="utf-8"))
     except OSError as e:
-        _say(f"refused: brand brief could not be read ({type(e).__name__})")
+        say(f"refused: brand brief could not be read ({type(e).__name__})")
         return EXIT_REFUSED
     except ValidationError as e:
-        _say(f"refused: brand brief is invalid ({e.error_count()} errors)")
+        say(f"refused: brand brief is invalid ({e.error_count()} errors)")
         return EXIT_REFUSED
     try:
         llm = with_runtime(llm or OpenRouterLLM())
     except LLMError as e:
-        _say(f"refused: {e}")
+        say(f"refused: {e}")
         return EXIT_REFUSED
     opts = OuterOptions(dry_run=args.dry_run, approve=args.approve, measure_only=args.measure_only,
                         min_score=args.min_score)
-    return run_outer(llm, brief, opts, input_fn=input_fn, clock=clock, say=_say)
+    return run_outer(llm, brief, opts, input_fn=input_fn, clock=clock, say=say)
 
 
 if __name__ == "__main__":
