@@ -197,19 +197,40 @@ class Controller:
 LOW_QUOTA = 10  # under this many requests left, a run (which may use up to 16) can stop part-way
 
 
-def budget_line(now: datetime | None = None) -> str:
-    """The Run tab's always-visible line: the harness's own request count, so it matches what caps the next run."""
+@dataclass(frozen=True)
+class Budget:
+    used: int
+    limit: int
+    next_cap: int
+    unreadable: int
+    posting_ok: bool
+    posting: str  # "OK now", or why not
+
+    @property
+    def low(self) -> bool:
+        return self.limit - self.used < LOW_QUOTA
+
+
+def budget(now: datetime | None = None) -> Budget:
+    """The harness's own request count and rate cap, so the page shows exactly what will cap the next run."""
     now = now or utc_now()
     cap, used, unreadable = quota.run_cap(now)
-    line = f"**Requests in the last 24 hours: {used} / {quota.DAILY_REQUEST_LIMIT} · next run may make {cap}**"
-    if unreadable:
-        line += f" ({unreadable} traces unreadable, so this may be low)"
     try:
         rate = guardrails.check_rate_cap(now, live_records())
-        line += " · posting: " + ("OK now" if rate["ok"] else "; ".join(rate["reasons"]))
+        ok, posting = rate["ok"], "OK now" if rate["ok"] else "; ".join(rate["reasons"])
     except ApprovedLogError:
-        line += " · posting: blocked, the publish log is unreadable"
-    if quota.DAILY_REQUEST_LIMIT - used < LOW_QUOTA:
+        ok, posting = False, "blocked, the publish log is unreadable"
+    return Budget(used, quota.DAILY_REQUEST_LIMIT, cap, unreadable, ok, posting)
+
+
+def budget_line(now: datetime | None = None) -> str:
+    """The same reading as one line of text."""
+    b = budget(now)
+    line = f"**Requests in the last 24 hours: {b.used} / {b.limit} · next run may make {b.next_cap}**"
+    if b.unreadable:
+        line += f" ({b.unreadable} traces unreadable, so this may be low)"
+    line += f" · posting: {b.posting}"
+    if b.low:
         line += "\n\nFew requests left: a run may stop part-way. Consider waiting until the count drops."
     return line
 
