@@ -349,3 +349,52 @@ def test_the_run_trace_ends_with_a_hashed_untruncated_json_summary(data, bsky, m
     kinds = {(e.agent, e.kind) for e in events}
     assert {("planner", "llm_call"), ("writer", "llm_call"), ("critic", "llm_call"),
             ("harness", "decision"), ("harness", "tool_call")} <= kinds
+
+
+
+def plan_only_summary() -> dict:
+    """run_summary() takes the last file by name, and two runs in one second sort by their random suffix."""
+    runs = [trace.read_run(f.stem) for f in (trace.data_dir() / "runs").glob("run_*.json")]
+    events = next(e for e in runs if e[0].summary_in == "plan_now")
+    return json.loads(events[-1].summary_out)
+
+def test_plan_only_plans_and_saves_the_week_without_writing_or_measuring(data, bsky, monkeypatch):  # noqa: F811
+    add_published("post_aaaa1111", timedelta(days=3))  # old enough to measure, but plan-only must not
+    monkeypatch.setattr(bluesky, "get_post_metrics", lambda uri: pytest.fail("plan-only must not measure"))
+    code, llm, prompts = go(["--plan-only"], PLAN_SCRIPT)
+    assert code == 0 and len(llm.calls) == 1 and prompts == [] and bsky == []
+    assert statuses() == ["planned", "planned", "planned"]
+    assert plan_only_summary()["outcomes"] == [{"post_id": None, "status": "planned", "reason": "planned 3 posts"}]
+    # The next normal run finds posts waiting, so it writes the first due one without planning again.
+    monkeypatch.setattr(bluesky, "get_post_metrics", lambda uri: {"likes": 0, "reposts": 0, "replies": 0})
+    code, llm, _ = go([], POST_SCRIPT)
+    assert code == 0 and len(llm.calls) == 2 and len(bsky) == 1 and len(state().posts) == 3
+
+
+def test_plan_only_is_refused_while_posts_are_waiting_and_costs_nothing(data, bsky):  # noqa: F811
+    go([], PLAN_SCRIPT + POST_SCRIPT)
+    before = state().model_dump()
+    code, llm, _ = go(["--plan-only"], [])
+    assert code == 2 and llm.calls == []
+    assert state().model_dump() == before
+    assert "plan now only runs when the queue is empty" in plan_only_summary()["outcomes"][0]["reason"]
+
+
+def test_plan_only_counts_a_live_post_still_marked_planned_as_done(data, bsky, monkeypatch):  # noqa: F811
+    go(["--plan-only"], PLAN_SCRIPT)
+    for p in state().posts:  # every post went out, but the state file never heard (a crash after publishing)
+        add_published(p.id, timedelta(hours=30))
+    code, llm, _ = go(["--plan-only"], [week_json(("2026-10-24", "2026-10-26", "2026-10-28"))])
+    assert code == 0 and len(llm.calls) == 1
+
+
+def test_plan_only_dry_run_plans_but_saves_nothing(data, bsky):  # noqa: F811
+    code, llm, _ = go(["--plan-only", "--dry-run"], PLAN_SCRIPT)
+    assert code == 0 and len(llm.calls) == 1
+    assert not plan_state.state_path().exists()
+
+
+@pytest.mark.parametrize("extra", [["--measure-only"], ["--requeue", "post_x"]])
+def test_plan_only_does_not_combine_with_other_modes(data, extra):  # noqa: F811
+    code, llm, _ = go(["--plan-only", *extra], [])
+    assert code == 2 and llm.calls == []

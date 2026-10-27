@@ -199,3 +199,63 @@ def test_the_budget_line_shows_requests_left_and_warns_when_low(data, monkeypatc
     monkeypatch.setattr(controller.quota, "run_cap", lambda now: (4, 46, 0))
     line = controller.budget_line(NOW)
     assert "46 / 50" in line and "next run may make 4" in line and "Few requests left" in line
+
+
+def recording_runner(calls: list[list[str]]) -> Callable:
+    return lambda argv, input_fn, say: calls.append(argv) or 0
+
+
+def test_topic_posts_and_plan_now_build_the_terminal_flags():
+    outer, post = [], []
+    ctl = Controller(runner=recording_runner(outer), post_runner=recording_runner(post))
+    assert ctl.start_topic("  ", "", "click", dry_run=True) == "Write a topic first."
+    ctl.start_topic(" Rye crust ", " ", "click", dry_run=True)
+    s = wait_for(ctl, done)
+    assert s.what == "topic post" and s.dry_run
+    ctl.start_topic("Rye crust", "the crackle as it cools", "engagement", dry_run=False)
+    wait_for(ctl, lambda s: done(s) and len(post) == 2)
+    ctl.plan_now()
+    s = wait_for(ctl, lambda s: done(s) and len(outer) == 1)
+    assert post == [["--topic", "Rye crust", "--goal", "click", "--dry-run"],
+                    ["--topic", "Rye crust", "--goal", "engagement", "--angle", "the crackle as it cools"]]
+    assert outer == [["--plan-only"]] and s.what == "plan now" and not s.dry_run
+
+
+def test_only_one_run_of_any_kind_at_a_time():
+    release = threading.Event()
+    ctl = Controller(runner=lambda argv, input_fn, say: release.wait(5) and 0)
+    ctl.start(dry_run=True)
+    assert "already going" in ctl.start_topic("Rye", "", "click", dry_run=True)
+    assert "already going" in ctl.plan_now()
+    release.set()
+    wait_for(ctl, done)
+
+
+def test_a_topic_dry_run_through_the_app_asks_then_publishes_a_dryrun_uri(data, bsky):  # noqa: F811
+    from scripts import run_post
+
+    def post_runner(argv, input_fn, say):
+        return run_post.main(argv, llm=MockLLM([GOOD_TEXT, scores(5)]), input_fn=input_fn, now=NOW,
+                             env_file=None, say=say)
+
+    ctl = Controller(post_runner=post_runner)
+    ctl.start_topic("Saturday class", "", "click", dry_run=True)
+    s = wait_for(ctl, lambda s: s.approval is not None)
+    assert s.approval.dry_run and "Saturday's class" in s.approval.prompt
+    ctl.answer(s.approval.id, "approve")
+    s = wait_for(ctl, done)
+    assert s.exit_code == 0 and "published: dryrun://" in s.log and bsky == []
+
+
+def test_topic_choices_are_the_planned_topics_newest_first_without_repeats(data):  # noqa: F811
+    assert controller.topic_choices() == []
+    posts = [plan_state.PostRecord(id=f"post_{i}", plan_id="plan_x", day=day, topic=topic, angle="a", goal="click")
+             for i, (day, topic) in enumerate([("2026-10-23", "topic 3 "), ("2026-10-25", "Topic 2"),
+                                               ("2026-10-27", "Topic 3")])]
+    plan_state.save_state(plan_state.PlanState(posts=posts))  # the oldest repeats the newest in other case and spacing
+    assert controller.topic_choices() == ["Topic 3", "Topic 2"]
+
+
+def test_a_topic_left_empty_in_the_dropdown_is_refused():
+    ctl = Controller(post_runner=lambda argv, input_fn, say: pytest.fail("must not start"))
+    assert ctl.start_topic(None, None, "click", dry_run=True) == "Write a topic first."

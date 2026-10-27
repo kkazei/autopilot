@@ -4,9 +4,11 @@
     python -m scripts.run_outer
     python -m scripts.run_outer --measure-only
     python -m scripts.run_outer --requeue post_1a2b3c4d
+    python -m scripts.run_outer --plan-only
 
 Human approval is on by default; --no-approve is refused unless --dry-run is also set, exactly like run_post.
 A dry run reads the real plan state and learnings but writes neither, and makes no Bluesky reads or analyst calls.
+--plan-only plans next week now, and only when no post is waiting; it never measures, writes or publishes.
 
 Exit codes: 0 done (including "nothing to do yet"), 2 refused by flags or config, 3 escalated, 4 failed,
 5 blocked by guardrails, 6 another run is active.
@@ -28,7 +30,7 @@ from harness.hermes_llm import with_runtime
 from harness.llm import LLM, LLMError, OpenRouterLLM
 from harness.publish import Clock, utc_now
 from harness.schemas import BrandBrief
-from loops.outer import EXIT_REFUSED, OuterOptions, requeue_post, run_outer
+from loops.outer import EXIT_REFUSED, OuterOptions, plan_now, requeue_post, run_outer
 
 DEFAULT_ENV_FILE = trace.REPO_ROOT / ".env"
 
@@ -41,6 +43,7 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--measure-only", action="store_true", help="learn from published posts, then stop")
     p.add_argument("--min-score", type=int, choices=range(1, 6), default=4, metavar="1-5")
     p.add_argument("--requeue", metavar="POST_ID", help="put an escalated post back in the queue (no model calls)")
+    p.add_argument("--plan-only", action="store_true", help="plan next week now; refused while any post is waiting")
     return p.parse_args(argv)
 
 
@@ -57,6 +60,9 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     args = parse_args(argv)
     if not args.approve and not args.dry_run:
         say("refused: --no-approve is only allowed together with --dry-run")
+        return EXIT_REFUSED
+    if args.plan_only and (args.measure_only or args.requeue):
+        say("refused: --plan-only cannot be combined with --measure-only or --requeue")
         return EXIT_REFUSED
     if env_file is not None:
         load_dotenv(env_file)
@@ -79,6 +85,8 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         return EXIT_REFUSED
     opts = OuterOptions(dry_run=args.dry_run, approve=args.approve, measure_only=args.measure_only,
                         min_score=args.min_score)
+    if args.plan_only:
+        return plan_now(llm, brief, opts, clock=clock, say=say)
     return run_outer(llm, brief, opts, input_fn=input_fn, clock=clock, say=say)
 
 

@@ -41,6 +41,12 @@ def _run_outer(argv: list[str], input_fn: Callable[[str], str], say: Callable[[s
     return run_outer.main(argv, input_fn=input_fn, say=say)
 
 
+def _run_post(argv: list[str], input_fn: Callable[[str], str], say: Callable[[str], None]) -> int:
+    from scripts import run_post
+
+    return run_post.main(argv, input_fn=input_fn, say=say)
+
+
 def _requeue(post_id: str, say: Callable[[str], None]) -> int:
     from scripts import run_outer
 
@@ -57,6 +63,7 @@ class Approval:
 @dataclass(frozen=True)
 class Snapshot:
     running: bool
+    what: str  # "next post", "topic post" or "plan now": the page says which kind of run is going
     dry_run: bool
     log: str
     approval: Approval | None
@@ -64,15 +71,17 @@ class Snapshot:
 
 
 class Controller:
-    def __init__(self, runner: Runner = _run_outer, requeuer: Requeuer = _requeue,
+    def __init__(self, runner: Runner = _run_outer, requeuer: Requeuer = _requeue, post_runner: Runner = _run_post,
                  approval_timeout_s: float = APPROVAL_TIMEOUT_S, log_limit: int = LOG_LIMIT) -> None:
         self._runner = runner
+        self._post_runner = post_runner
         self._requeuer = requeuer
         self._timeout_s = approval_timeout_s
         self._mutex = threading.Lock()
         self._log: deque[str] = deque(maxlen=log_limit)
         self._thread: threading.Thread | None = None
         self._dry_run = False
+        self._what = "next post"
         self._exit_code: int | None = None
         self._approval: Approval | None = None
         self._answer: str | None = None
@@ -92,21 +101,40 @@ class Controller:
         return self._thread is not None and self._thread.is_alive()
 
     def start(self, *, dry_run: bool) -> str:
+        """The next due post, exactly as the terminal's run_outer does it."""
+        started = self._launch(self._runner, ["--dry-run"] if dry_run else [], dry_run, "next post")
+        return started or ("Dry run started." if dry_run else "Live run started.")
+
+    def start_topic(self, topic: str | None, angle: str | None, goal: str, *, dry_run: bool) -> str:
+        """One post on a person's topic, through run_post: the same checks, rate cap and approval as any post."""
+        topic, angle = (topic or "").strip(), (angle or "").strip()
+        if not topic:
+            return "Write a topic first."
+        argv = ["--topic", topic, "--goal", goal, *(["--angle", angle] if angle else []),
+                *(["--dry-run"] if dry_run else [])]
+        started = self._launch(self._post_runner, argv, dry_run, "topic post")
+        return started or ("Dry run of the topic post started." if dry_run else "Live topic post started.")
+
+    def plan_now(self) -> str:
+        """Next week's plan, ahead of time. The harness refuses while any post is waiting, at no model cost."""
+        return self._launch(self._runner, ["--plan-only"], False, "plan now") or "Planning started."
+
+    def _launch(self, runner: Runner, argv: list[str], dry_run: bool, what: str) -> str | None:
+        """Starts the run, or says why not. One run at a time, whatever kind."""
         with self._mutex:
             if self._busy():
                 return "A run is already going. Wait for it to finish."
             self._log.clear()
-            self._dry_run = dry_run
+            self._dry_run, self._what = dry_run, what
             self._exit_code = None
             # Not a daemon: closing the app waits for the run to unwind, so the outer lock is released.
-            self._thread = threading.Thread(target=self._work, args=(["--dry-run"] if dry_run else [],),
-                                            name="autopilot-run")
+            self._thread = threading.Thread(target=self._work, args=(runner, argv), name="autopilot-run")
             self._thread.start()
-        return "Dry run started." if dry_run else "Live run started."
+        return None
 
-    def _work(self, argv: list[str]) -> None:
+    def _work(self, runner: Runner, argv: list[str]) -> None:
         try:
-            code: int | None = self._runner(argv, self._ask, self.say)
+            code: int | None = runner(argv, self._ask, self.say)
         except Exception as e:  # noqa: BLE001 - the app must outlive a crashed run and say what happened
             code = None
             self.say(f"the run crashed ({type(e).__name__}: {e}); check the trace and the terminal output")
@@ -145,7 +173,7 @@ class Controller:
 
     def snapshot(self) -> Snapshot:
         with self._mutex:
-            return Snapshot(running=self._busy(), dry_run=self._dry_run, log="\n".join(self._log),
+            return Snapshot(running=self._busy(), what=self._what, dry_run=self._dry_run, log="\n".join(self._log),
                             approval=self._approval, exit_code=self._exit_code)
 
     def requeue(self, post_id: str) -> str:
@@ -207,6 +235,18 @@ def rate_text(now: datetime | None = None) -> str:
 
 
 PLAN_HEADERS = ["day", "post", "topic", "goal", "status", "last note"]
+
+
+def topic_choices() -> list[str]:
+    """Topics the planner has already used, newest first, as suggestions; the form still takes any typed topic."""
+    try:
+        state = plan_state.load_state()
+    except (plan_state.PlanStateError, OSError, LockTimeout):
+        return []
+    seen: dict[str, str] = {}
+    for p in sorted(state.posts, key=lambda p: p.day, reverse=True):
+        seen.setdefault(p.topic.strip().lower(), p.topic.strip())
+    return list(seen.values())
 
 
 def plan_rows() -> tuple[str, list[list[str]], list[str]]:
