@@ -58,6 +58,15 @@ python -m scripts.run_post --topic "<a real, specific topic>" --goal click      
 
 Run these in a real terminal: the approval prompt needs a keyboard. Models are listed in `OPENROUTER_MODELS`; on a 429 or a timeout the client backs off and tries the next one. The free models are unstable (some have been retired, others rate-limit in bursts), so expect to adjust that list.
 
+**The local app (optional).** The same weekly run, with approval buttons instead of the terminal prompt:
+
+```
+.venv/Scripts/python.exe -m pip install -r requirements-ui.txt   # gradio; CI and the scheduled run never need it
+Autopilot.bat                                                    # or: python -m ui.app --open
+```
+
+It serves on 127.0.0.1 only (no share link, analytics off) and opens in its own Edge window; closing the console window stops it. **Run** starts a dry run, or a live run after a second click, and shows the draft with Approve, Not now (carried forward to the next run) and Reject (blocked for good); no answer within 15 minutes counts as Not now. **Plan** shows the week and requeues escalated posts. **Status** shows the day's request count and the rate cap, pulls from GitHub (fast-forward, on master only), and **Save to GitHub** opens a PR with only `data/` on a new `data/app-...` branch; it never pushes to master. The terminal commands keep working exactly as before.
+
 **Hermes writer runtime (opt-in).** By default every agent calls OpenRouter straight from the harness. With `AUTOPILOT_WRITER_RUNTIME=hermes` (and the `hermes` CLI installed), the writer's first call of each attempt runs through [Hermes Agent](https://github.com/NousResearch/hermes-agent) behind a harness-owned LLM proxy that holds the key; a cross-check of the proxy, Hermes's output and the tool call log fails closed, and anything it cannot trust falls back to the direct chain. Repairs, the critic and the other roles always run direct. One live run so far: Hermes answered and the cross-check passed, but its draft was over the length limit, so the post was written by the harness's direct repair.
 
 ## What is proven, and what is partial
