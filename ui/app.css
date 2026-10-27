@@ -1,0 +1,186 @@
+/* Autopilot's local app. A calm control panel: neutral surfaces, one accent (the theme's indigo) for the main
+   action, and colour otherwise only for state. Tokens first, then layout, then the two dialogs. */
+
+:root {
+  --ap-bg: #f5f6f8;
+  --ap-surface: #ffffff;
+  --ap-surface-2: #f0f1f4;
+  --ap-border: #e1e3e8;
+  --ap-text: #17191e;
+  --ap-muted: #575d69;
+  --ap-accent: #4f46e5;
+  --ap-ok: #166534;
+  --ap-ok-bg: #dcfce7;
+  --ap-warn: #854d0e;
+  --ap-warn-bg: #fef3c7;
+  --ap-bad: #991b1b;
+  --ap-bad-bg: #fee2e2;
+  --ap-info: #3730a3;
+  --ap-info-bg: #e0e7ff;
+  --ap-ok-fill: #16a34a;
+  --ap-warn-fill: #d97706;
+  --ap-bad-fill: #dc2626;
+  --ap-neutral: #3f4450;
+  --ap-neutral-bg: #eceef2;
+  --ap-scrim: rgb(15 17 21 / 0.5);
+  --ap-shadow: 0 18px 40px -12px rgb(15 23 42 / 0.35), 0 2px 6px rgb(15 23 42 / 0.08);
+  --ap-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark {
+  --ap-bg: #101217;
+  --ap-surface: #171a20;
+  --ap-surface-2: #1e2129;
+  --ap-border: #2b2f39;
+  --ap-text: #e9ebef;
+  --ap-muted: #a1a7b3;
+  --ap-accent: #a5b4fc;
+  --ap-ok: #86efac;
+  --ap-ok-bg: rgb(34 197 94 / 0.16);
+  --ap-warn: #fcd34d;
+  --ap-warn-bg: rgb(245 158 11 / 0.16);
+  --ap-bad: #fca5a5;
+  --ap-bad-bg: rgb(239 68 68 / 0.18);
+  --ap-info: #c7d2fe;
+  --ap-info-bg: rgb(99 102 241 / 0.2);
+  --ap-ok-fill: #4ade80;
+  --ap-warn-fill: #fbbf24;
+  --ap-bad-fill: #f87171;
+  --ap-neutral: #d4d7de;
+  --ap-neutral-bg: rgb(255 255 255 / 0.07);
+  --ap-scrim: rgb(0 0 0 / 0.62);
+  --ap-shadow: 0 20px 48px -12px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.4);
+}
+
+/* Browser surfaces */
+::selection { background: color-mix(in oklab, var(--ap-accent) 32%, transparent); }
+* { scrollbar-color: var(--ap-border) transparent; scrollbar-width: thin; }
+:focus-visible { outline: 2px solid var(--ap-accent); outline-offset: 2px; }
+body, .gradio-container { background: var(--ap-bg) !important; }
+/* Full width up to the cap on every tab, so switching tabs never resizes the page */
+.gradio-container { width: 100% !important; max-width: 1120px !important; margin: 0 auto !important;
+                    color: var(--ap-text); }
+
+/* Type: one family, a tight scale */
+.gradio-container h1, .gradio-container h2 { color: var(--ap-text); letter-spacing: -0.01em; text-wrap: balance; }
+.ap-brand { font-size: 1.25rem !important; font-weight: 650 !important; margin: 0 !important; }
+.ap-card h2, .ap-dialog h2 { font-size: 1rem !important; font-weight: 650 !important; margin: 0 0 4px !important; }
+.ap-muted, .ap-hint, .ap-rationale { color: var(--ap-muted); font-size: 0.875rem; line-height: 1.5; margin: 0; }
+.ap-num, .ap-sub { font-variant-numeric: tabular-nums; }
+.ap-label { font-size: 0.75rem; font-weight: 600; color: var(--ap-muted); text-transform: uppercase;
+            letter-spacing: 0.04em; }
+
+/* Top bar */
+#ap-topbar { align-items: center !important; gap: 14px; padding: 4px 0 14px; flex-wrap: nowrap;
+             border-bottom: 1px solid var(--ap-border); }
+#ap-topbar > .block { border: 0 !important; background: transparent !important; box-shadow: none !important;
+                      padding: 0 !important; }
+#ap-topbar > .ap-shrink { flex: 0 0 auto !important; width: auto !important; }
+#ap-topbar > .ap-grow { flex: 1 1 0 !important; min-width: 0 !important; }
+.ap-budget { display: flex; align-items: center; justify-content: flex-end; gap: 14px; flex-wrap: wrap; }
+.ap-meter-group { display: flex; align-items: center; gap: 8px; }
+.ap-meter { position: relative; width: 120px; height: 6px; border-radius: 999px; background: var(--ap-neutral-bg);
+            overflow: hidden; }
+.ap-meter > span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--ap-ok-fill);
+                   transition: width 240ms var(--ap-ease); }
+.ap-meter.warn > span { background: var(--ap-warn-fill); }
+.ap-meter.bad > span { background: var(--ap-bad-fill); }
+.ap-num { font-weight: 600; font-size: 0.875rem; }
+.ap-sub { color: var(--ap-muted); font-size: 0.8125rem; }
+.ap-warning { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--ap-warn-bg);
+              color: var(--ap-warn); font-size: 0.875rem; }
+
+/* Pills carry state everywhere: top bar, dialogs, plan table */
+.ap-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+           font-size: 0.8125rem; font-weight: 600; line-height: 1.4; white-space: nowrap;
+           background: var(--ap-neutral-bg); color: var(--ap-neutral); }
+.ap-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; }
+.ap-pill.ok { background: var(--ap-ok-bg); color: var(--ap-ok); }
+.ap-pill.warn { background: var(--ap-warn-bg); color: var(--ap-warn); }
+.ap-pill.bad { background: var(--ap-bad-bg); color: var(--ap-bad); }
+.ap-pill.info { background: var(--ap-info-bg); color: var(--ap-info); }
+.ap-pill.running::before { animation: ap-pulse 1.4s var(--ap-ease) infinite; }
+@keyframes ap-pulse { 0% { box-shadow: 0 0 0 0 currentColor; } 100% { box-shadow: 0 0 0 6px transparent; } }
+
+/* Cards and panels */
+.ap-card { background: var(--ap-surface) !important; border: 1px solid var(--ap-border) !important;
+           border-radius: 12px !important; padding: 18px !important; gap: 12px !important; }
+/* Gradio boxes every input; inside a card that reads as boxes within boxes, so the card is the only frame */
+.ap-card .block, .ap-card .form { border: 0 !important; background: transparent !important;
+                                  box-shadow: none !important; padding: 0 !important; }
+.ap-card .form { gap: 12px !important; }
+.ap-dialog .block { border: 0 !important; background: transparent !important; box-shadow: none !important;
+                    padding: 0 !important; min-height: 0 !important; }
+.ap-dialog .html-container, .ap-dialog .prose { min-height: 0 !important; padding: 0 !important; }
+.ap-notice { min-height: 1.5em; color: var(--ap-muted); }
+.ap-notice p { margin: 4px 2px; font-size: 0.875rem; }
+.ap-log textarea { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace !important;
+                   font-size: 0.8125rem !important; line-height: 1.55 !important; background: var(--ap-surface-2) !important; }
+/* One button shape everywhere: same height, same minimum width, sized to the label, never stretched */
+.gradio-container button:is(.primary, .secondary, .stop) { height: 40px !important; min-height: 40px !important;
+  padding: 0 18px !important; font-size: 0.9375rem !important; font-weight: 600 !important; border-radius: 8px !important; }
+.ap-actions, .ap-toolbar { flex-wrap: wrap; gap: 10px !important; }
+.ap-actions { justify-content: flex-start; }
+.ap-actions.ap-end { justify-content: flex-end; }
+.ap-actions > button, .ap-toolbar > button { flex: 0 0 auto !important; min-width: 128px !important;
+                                             width: auto !important; }
+.ap-toolbar { align-items: flex-end !important; }
+.ap-toolbar > button { align-self: flex-end !important; }
+.ap-empty { padding: 32px 16px; text-align: center; border: 1px dashed var(--ap-border); border-radius: 12px;
+            color: var(--ap-muted); }
+
+/* Plan table */
+.ap-rationale { max-width: 75ch; margin: 4px 0 14px; }
+.ap-table-wrap { overflow-x: auto; border: 1px solid var(--ap-border); border-radius: 12px; background: var(--ap-surface); }
+.ap-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.ap-table th { text-align: left; font-weight: 600; color: var(--ap-muted); font-size: 0.75rem; text-transform: uppercase;
+               letter-spacing: 0.04em; padding: 10px 14px; border-bottom: 1px solid var(--ap-border); }
+.ap-table td { padding: 10px 14px; border-bottom: 1px solid var(--ap-border); vertical-align: top; color: var(--ap-text); }
+.ap-table tr:last-child td { border-bottom: 0; }
+.ap-table tbody tr:hover td { background: var(--ap-surface-2); }
+.ap-topic { display: block; font-weight: 600; }
+.ap-id { display: block; color: var(--ap-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.ap-note { color: var(--ap-muted); max-width: 40ch; }
+
+/* Dialogs: a fixed scrim over the page, the panel centred, one short entrance */
+.ap-modal { position: fixed !important; inset: 0 !important; z-index: 1000; margin: 0 !important;
+            align-items: center !important; justify-content: center !important; padding: 16px !important;
+            background: var(--ap-scrim); max-width: none !important; width: auto !important; }
+.ap-dialog { width: min(560px, 100%) !important; max-height: calc(100vh - 32px); overflow-y: auto;
+             flex: 0 0 auto !important; background: var(--ap-surface) !important; border: 1px solid var(--ap-border);
+             border-radius: 14px; padding: 22px !important; gap: 14px !important; box-shadow: var(--ap-shadow);
+             animation: ap-dialog-in 200ms var(--ap-ease); }
+@keyframes ap-dialog-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+.ap-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ap-dialog-head h2 { margin: 0 !important; font-size: 1.125rem !important; }
+.ap-dialog-note { color: var(--ap-muted); font-size: 0.9375rem; line-height: 1.5; margin: 0; }
+.ap-dialog-topic { font-weight: 600; color: var(--ap-text); margin: 0 0 6px; }
+/* Reject is final, so it reads as the destructive choice without competing with Approve */
+#approval-reject { margin-right: auto; background: transparent !important; color: var(--ap-bad) !important;
+                   border: 1px solid color-mix(in oklab, var(--ap-bad) 45%, transparent) !important; }
+#approval-reject:hover { background: var(--ap-bad-bg) !important; }
+
+/* The draft as it will read on Bluesky */
+.ap-post { border: 1px solid var(--ap-border); border-radius: 12px; padding: 14px 16px; background: var(--ap-surface-2); }
+.ap-post header { font-weight: 650; font-size: 0.875rem; margin-bottom: 6px; }
+.ap-post p { margin: 0; font-size: 1rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ap-post footer { margin-top: 10px; text-align: right; font-size: 0.75rem; color: var(--ap-muted);
+                  font-variant-numeric: tabular-nums; }
+.ap-post footer.bad { color: var(--ap-bad); font-weight: 600; }
+.ap-scores { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ap-score { font-size: 0.8125rem; padding: 2px 8px; border-radius: 6px; background: var(--ap-neutral-bg); color: var(--ap-muted); }
+.ap-score b { color: var(--ap-text); font-variant-numeric: tabular-nums; }
+.ap-hint { margin-top: 10px; font-size: 0.8125rem; }
+
+@media (max-width: 720px) {
+  .gradio-container { padding-left: 12px !important; padding-right: 12px !important; }
+  #ap-topbar { flex-wrap: wrap !important; }
+  #ap-topbar > .ap-grow { flex: 1 1 100% !important; }
+  .ap-budget { justify-content: flex-start; }
+  .ap-actions > button, .ap-toolbar > button { flex: 1 1 auto !important; min-width: 0 !important; }
+  #approval-reject { margin-right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-dialog, .ap-pill.running::before, .ap-meter > span { animation: none !important; transition: none !important; }
+}
