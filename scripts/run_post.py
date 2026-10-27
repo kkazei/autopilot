@@ -61,11 +61,13 @@ def _say(message: str) -> None:
 
 def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
          input_fn: Callable[[str], str] = input, now: datetime | None = None,
-         clock: Clock | None = None, env_file: Path | None = DEFAULT_ENV_FILE) -> int:
-    """Tests inject `llm`, `input_fn` and `now` or `clock`, and pass env_file=None so the real .env never loads."""
+         clock: Clock | None = None, env_file: Path | None = DEFAULT_ENV_FILE,
+         say: Callable[[str], None] = _say) -> int:
+    """Tests inject `llm`, `input_fn` and `now` or `clock`, and pass env_file=None so the real .env never loads.
+    The local app (ui/) passes its own `say`, so a run's messages reach its log instead of the console."""
     args = parse_args(argv)
     if not args.approve and not args.dry_run:
-        _say("refused: --no-approve is only allowed together with --dry-run")
+        say("refused: --no-approve is only allowed together with --dry-run")
         return EXIT_REFUSED
     if env_file is not None:
         load_dotenv(env_file)
@@ -78,32 +80,32 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     try:
         brief = BrandBrief.model_validate_json((trace.data_dir() / "brand_brief.json").read_text(encoding="utf-8"))
     except OSError as e:
-        _say(f"refused: brand brief could not be read ({type(e).__name__})")
+        say(f"refused: brand brief could not be read ({type(e).__name__})")
         return EXIT_REFUSED
     except ValidationError as e:
-        _say(f"refused: brand brief is invalid ({e.error_count()} errors)")
+        say(f"refused: brand brief is invalid ({e.error_count()} errors)")
         return EXIT_REFUSED
     try:
         llm = with_runtime(llm or OpenRouterLLM())
     except LLMError as e:
-        _say(f"refused: {e}")
+        say(f"refused: {e}")
         return EXIT_REFUSED
 
     run_id = trace.start_run()
     trace.log_event(run_id, "harness", "decision", f"run_post | topic={args.topic!r} goal={args.goal}",
                     f"start: dry_run={args.dry_run} approval={args.approve} min_score={args.min_score}", ok=True)
-    _say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve}, writer={runtime_from_env()})")
+    say(f"run {run_id}  (dry_run={args.dry_run}, approval={args.approve}, writer={runtime_from_env()})")
 
     try:
         published = live_records()
     except ApprovedLogError as e:
         trace.log_event(run_id, "harness", "decision", "approved log pre-check", str(e), ok=False)
-        _say(f"blocked before writing: {e}")
+        say(f"blocked before writing: {e}")
         return EXIT_BLOCKED
     cap = guardrails.check_rate_cap(now, published)
     if not cap["ok"]:
         trace.log_event(run_id, "harness", "decision", "rate cap pre-check", "; ".join(cap["reasons"]), ok=False)
-        _say("blocked before writing: " + "; ".join(cap["reasons"]))
+        say("blocked before writing: " + "; ".join(cap["reasons"]))
         return EXIT_BLOCKED
 
     # The post's day is the UTC date, like every other timestamp the harness writes.
@@ -112,14 +114,14 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     result = run_inner(llm, run_id, planned, brief, min_score=args.min_score)
     for i, a in enumerate(result.attempts, 1):
         c = a.critique
-        _say(f"\nattempt {i}: {a.draft.text}\n  scores voice={c.voice} clarity={c.clarity} cta={c.cta} "
+        say(f"\nattempt {i}: {a.draft.text}\n  scores voice={c.voice} clarity={c.clarity} cta={c.cta} "
              f"policy_risk={c.policy_risk}\n" + "\n".join(f"  {k}: {v}" for k, v in c.reasons.items()))
     if result.status == "failed":
-        _say(f"\nfailed: {result.error}")
+        say(f"\nfailed: {result.error}")
         return EXIT_FAILED
     if result.status == "escalated":
         cause = f" (stopped by a model error: {result.error})" if result.error else ""
-        _say(f"\nescalated after {len(result.attempts)} attempts{cause}: needs human review; nothing published")
+        say(f"\nescalated after {len(result.attempts)} attempts{cause}: needs human review; nothing published")
         return EXIT_ESCALATED
 
     final = result.final
@@ -130,7 +132,7 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     if not gate["ok"]:
         trace.log_event(run_id, "harness", "decision", f"publish {planned.id}",
                         "blocked: " + "; ".join(gate["reasons"]), ok=False)
-        _say("\nblocked: " + "; ".join(gate["reasons"]))
+        say("\nblocked: " + "; ".join(gate["reasons"]))
         return EXIT_BLOCKED
 
     try:
@@ -139,17 +141,17 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
                          min_score=args.min_score, clock=clock)
     except PublishBlocked as e:
         trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"blocked at publish: {e}", ok=False)
-        _say(f"\nblocked at publish time: {e}")
+        say(f"\nblocked at publish time: {e}")
         return EXIT_BLOCKED
     except PublishRefused as e:
         trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"refused: {e}", ok=False)
-        _say(f"\nrefused: {e}")
+        say(f"\nrefused: {e}")
         return EXIT_REFUSED
     except Exception as e:  # noqa: BLE001 - any client error here may mean the post is live; report, never retry
         with contextlib.suppress(trace.TraceWriteError):
             trace.log_event(run_id, "harness", "decision", f"publish {planned.id}",
                             f"failed, outcome unknown: {type(e).__name__}: {e}", ok=False)
-        _say(f"\npublish failed and the outcome is unknown ({type(e).__name__}: {e}). Check the account before "
+        say(f"\npublish failed and the outcome is unknown ({type(e).__name__}: {e}). Check the account before "
              "retrying; the pending row keeps counting toward the rate cap.")
         return EXIT_FAILED
     # The post is out: bookkeeping problems are reported, never turned into a failure.
@@ -157,8 +159,8 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         trace.log_event(run_id, "harness", "decision", f"publish {planned.id}", f"published: {record['uri']}",
                         ok=True)
     for warning in record["warnings"]:
-        _say(f"warning: {warning}")
-    _say(f"\npublished: {record['uri']}\ntrace: {trace.run_path(run_id)}")
+        say(f"warning: {warning}")
+    say(f"\npublished: {record['uri']}\ntrace: {trace.run_path(run_id)}")
     return EXIT_PUBLISHED
 
 

@@ -134,6 +134,91 @@ def run_outer(llm: LLM, brief: BrandBrief, opts: OuterOptions, *, input_fn: Call
         return code
 
 
+def plan_now(llm: LLM, brief: BrandBrief, opts: OuterOptions, *, clock: Clock = utc_now,
+             say: Callable[[str], None] = print) -> int:
+    """A person plans the next week now, instead of waiting for a run to find the queue empty.
+
+    Kept apart from _run so the scheduled path stays exactly as it was. It refuses while any post is waiting, so it
+    can never stack a second week on the current one, and it never measures, writes or publishes. A dry run plans
+    but saves nothing.
+    """
+    with contextlib.ExitStack() as stack:
+        if not _acquire(stack, say):
+            return EXIT_BUSY
+        now = clock()
+        run_id = trace.start_run()
+        report = RunReport()
+        trace.log_event(run_id, "harness", "decision", "plan_now", f"start: dry_run={opts.dry_run}", ok=True)
+        say(f"run {run_id}  (plan only, dry_run={opts.dry_run})")
+        cap, used, unreadable = quota.run_cap(now)
+        note = f" ({unreadable} unreadable trace files, so this may be low)" if unreadable else ""
+        trace.log_event(run_id, "harness", "decision", "daily guard",
+                        f"{used} model requests in the last 24 hours{note}; this run may make {cap}", ok=cap > 0)
+        if unreadable:
+            report.warnings.append(f"{unreadable} unreadable trace files: the daily request count may be low")
+        say(f"model requests: {used} in the last 24 hours, {cap} allowed this run")
+        with run_budget(cap) as budget:
+            code = _plan_only(llm, brief, opts, run_id, now, report, say)
+        _log_summary(run_id, code, opts, budget, used, report)
+        say(f"trace: {trace.run_path(run_id)}")
+        return code
+
+
+def _plan_only(llm: LLM, brief: BrandBrief, opts: OuterOptions, run_id: str, now: datetime, report: RunReport,
+               say: Callable[[str], None]) -> int:
+    def log(summary_in: str, summary_out: str, ok: bool = True) -> None:
+        trace.log_event(run_id, "harness", "decision", summary_in, summary_out, ok=ok)
+
+    try:
+        state = plan_state.load_state()
+        published = live_records()
+    except (PlanStateError, ApprovedLogError) as e:
+        log("plan state", f"refused: {e}", ok=False)
+        say(f"refused: {e}")
+        report.outcome(None, "skipped", f"refused: {e}")
+        return EXIT_REFUSED
+    # Settled in memory only: a live post still marked "planned" must not read as waiting. The next run saves it.
+    plan_state.reconcile(state, published, run_id, now)
+    waiting = [p for p in state.posts if p.status in plan_state.ACTIVE]
+    if waiting:
+        reason = (f"{len(waiting)} posts are still waiting (next on {min(p.day for p in waiting)}); "
+                  "plan now only runs when the queue is empty")
+        log("plan now", f"refused: {reason}", ok=False)
+        report.outcome(None, "skipped", f"refused: {reason}")
+        say(f"refused: {reason}")
+        return EXIT_REFUSED
+    today = now.astimezone(timezone.utc).date()
+    try:
+        learnings = fetch_learnings(run_id)
+        week = plan_week(llm, run_id, brief, learnings, today)
+    except (LLMError, ToolRefused, OSError) as e:
+        log("plan", f"failed: {type(e).__name__}: {e}", ok=False)
+        say(f"failed to plan: {e}")
+        report.outcome(None, "failed", f"planning failed: {type(e).__name__}: {e}")
+        return EXIT_FAILED
+    added = plan_state.add_plan(state, week, run_id, now, {r.get("post_id") for r in published})
+    log("plan", f"planned {len(added)} posts: " + ", ".join(f"{p.id} {p.day}" for p in added))
+    report.plan = {"plan_id": added[0].plan_id, "rationale": week.rationale,
+                   "posts": [{"id": p.id, "day": p.day.isoformat(), "topic": p.topic, "angle": p.angle,
+                              "goal": p.goal} for p in added]}
+    for p in added:
+        say(f"  {p.day}  {p.id}  {p.topic} ({p.goal})")
+    if opts.dry_run:
+        report.outcome(None, "skipped", "dry run: plan not saved")
+        say(f"planned {len(added)} posts; dry run, so the plan was not saved")
+        return EXIT_OK
+    try:
+        plan_state.save_state(state)
+    except (OSError, LockTimeout) as e:
+        log("plan state", f"write failed: {type(e).__name__}", ok=False)
+        report.outcome(None, "failed", "the new plan could not be saved")
+        say(f"failed: the plan could not be saved ({type(e).__name__})")
+        return EXIT_FAILED
+    report.outcome(None, "planned", f"planned {len(added)} posts")
+    say(f"planned {len(added)} posts for the week")
+    return EXIT_OK
+
+
 def _log_summary(run_id: str, code: int, opts: OuterOptions, budget: Budget, used_24h: int, report: RunReport) -> None:
     """The run's last event, for the dashboard: complete JSON (never truncated) and its hash, so a reader can
     check the summary is the one the run wrote. Redacted before hashing, because the trace redacts what it stores."""
