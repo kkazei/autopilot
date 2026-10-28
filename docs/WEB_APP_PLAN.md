@@ -98,9 +98,13 @@ through `/api/actions`, which only the signed-in owner can call, and only from t
    | `NEXTAUTH_SECRET` | a new random value: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
    | `NEXTAUTH_URL` | `https://<project>.vercel.app` |
    | `AUTH_ALLOWED_LOGIN` | `kkazei` |
+   | `AUTH_PASSWORD_HASH` | optional: enables username + password sign-in (the username is `AUTH_ALLOWED_LOGIN`). Make it with `cd web && node scripts/hash-password.mjs` in your own terminal |
 
 3. Local dev: copy `web/.env.example` to `web/.env.local`, fill it from `.env` and the local OAuth app, then
    `cd web && npm install && npm run dev`.
+
+Password sign-in locks a username after 5 wrong passwords in 15 minutes (an IP after 10), counted in the `auth_failures`
+table, the only table the web app writes. GitHub sign-in is unaffected, so a lockout never shuts the owner out.
 
 ## Known limits
 
