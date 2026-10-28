@@ -10,8 +10,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from harness.db_store import PostgresStore
+from harness import trace
+from harness.db_store import URL_ENV, PostgresStore
+from harness.env import load_dotenv
 
+load_dotenv(trace.REPO_ROOT / ".env")  # values already in the environment win, as everywhere else
 URL = os.environ.get("AUTOPILOT_TEST_DATABASE_URL")
 NOW = datetime(2026, 10, 28, 12, 0, tzinfo=timezone.utc)
 
@@ -20,6 +23,8 @@ pytestmark = [pytest.mark.live, pytest.mark.skipif(not URL, reason="AUTOPILOT_TE
 
 @pytest.fixture
 def store():
+    if URL == os.environ.get(URL_ENV):
+        pytest.fail("AUTOPILOT_TEST_DATABASE_URL is the app's DATABASE_URL; this test drops tables, so refusing")
     s = PostgresStore(URL)
     s._conn.execute("drop table if exists docs, log_records, runs")
     s.close()
