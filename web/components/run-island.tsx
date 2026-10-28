@@ -37,7 +37,7 @@ export function RunIsland() {
     const last = run?.events.at(-1);
     if (status.approval) {
       tasks.push({ id: `approval-${status.approval.id}`, label: "Draft needs you", detail: status.approval.dry_run ? "dry run" : "live post", status: "running",
-        action: path === "/" ? undefined : { label: "Review", onClick: () => router.push("/") } });
+        action: path === "/control" ? undefined : { label: "Review", onClick: () => router.push("/control") } });
     } else {
       tasks.push({ id: `run-${run?.run_id ?? "starting"}`, label: status.what, detail: last ? stepLabel(last) : "starting…", status: "running",
         action: run ? { label: "Trace", onClick: () => router.push(`/runs/${run.run_id}`) } : undefined });

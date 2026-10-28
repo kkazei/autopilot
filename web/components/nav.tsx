@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 
 import { cx, Icon, type IconName } from "./ui";
 
-const ITEMS: [string, string, IconName][] = [["/", "Control", "dashboard"], ["/plan", "Plan", "calendar"], ["/runs", "Traces", "activity"], ["/learnings", "Learnings", "bulb"]];
-const isActive = (path: string, href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+const ITEMS: [string, string, IconName][] = [["/control", "Control", "dashboard"], ["/plan", "Plan", "calendar"], ["/runs", "Traces", "activity"], ["/learnings", "Learnings", "bulb"]];
+const isActive = (path: string, href: string) => path.startsWith(href);
 
 export function SideNav() {
   const path = usePathname();
