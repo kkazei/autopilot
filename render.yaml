@@ -1,0 +1,37 @@
+# Render blueprint for the hosted backend (docs/WEB_APP_PLAN.md, Phase 2). Free plan: sleeps after 15 idle minutes.
+# Secrets are declared with sync: false, so Render asks for each value in its dashboard; none is ever stored here.
+services:
+  - type: web
+    name: autopilot-api
+    runtime: docker
+    plan: free
+    region: virginia  # next to Neon (us-east-1) and Vercel's default functions region
+    branch: master
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - agents/**
+        - backend/**
+        - harness/**
+        - loops/**
+        - mcp_server/**
+        - scripts/**
+        - ui/controller.py
+        - requirements.txt
+        - requirements-api.txt
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_MODELS
+        sync: false
+      - key: BLUESKY_HANDLE
+        sync: false
+      - key: BLUESKY_APP_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTOPILOT_BACKEND_SECRET
+        sync: false

@@ -1,0 +1,4 @@
+# The hosted backend (backend/, the Hugging Face Space) only. Install on top of requirements.txt.
+fastapi==0.162.0    # the HTTP API the web app calls; the stdlib's http.server has no routing or request validation
+uvicorn==0.54.0     # the ASGI server that runs it in the Space
+httpx==0.28.1       # tests only: FastAPI's TestClient needs it

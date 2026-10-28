@@ -33,7 +33,8 @@ Agent = Literal["planner", "writer", "critic", "analyst", "harness"]
 Kind = Literal["llm_call", "tool_call", "guardrail", "decision"]
 
 # Values of these variables are replaced wherever they appear, whatever their format.
-SECRET_ENV_VARS = ("OPENROUTER_API_KEY", "BLUESKY_APP_PASSWORD", "AUTOPILOT_PUBLISH_TOKEN", "DATABASE_URL")
+SECRET_ENV_VARS = ("OPENROUTER_API_KEY", "BLUESKY_APP_PASSWORD", "AUTOPILOT_PUBLISH_TOKEN", "DATABASE_URL",
+                   "AUTOPILOT_BACKEND_SECRET")
 _MIN_SECRET_LEN = 8
 _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"sk-or-[A-Za-z0-9_\-]+"), "[REDACTED:openrouter_key]"),

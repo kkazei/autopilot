@@ -1,8 +1,11 @@
 name: Autopilot run
 
 # The schedule only measures: it reads engagement on posts that are old enough, saves a learning for each, and makes
-# no drafts. Publishing needs a human to answer the approval prompt, and a runner has no keyboard, so live posts
-# stay local (docs/DEPLOY.md). A manual run with dry_run = true does the whole loop without publishing anything.
+# no drafts. Publishing needs a human to answer the approval prompt, which happens in the web app (docs/WEB_APP_PLAN.md).
+# A manual run with dry_run = true does the whole loop without publishing anything.
+#
+# State lives in Postgres (DATABASE_URL): scripts.db_run pulls it, runs, and pushes it back under the same lock the
+# web backend takes, so the two never overlap. Nothing is committed to the repository any more.
 #
 # Scheduled workflows run from the default branch only: this file does nothing on a schedule until it is merged there.
 # 06:17 UTC is an assumption (off the hour, when scheduled jobs queue); a post made the evening before is over 2 hours old.
@@ -17,9 +20,9 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
-# Two runs must never overlap: the second would read data/ before the first has pushed it.
+# Queued rather than overlapped; the database lock also stops a cron run that starts while the web backend is busy.
 concurrency:
   group: autopilot-run
   cancel-in-progress: false
@@ -33,6 +36,7 @@ jobs:
       OPENROUTER_MODELS: ${{ secrets.OPENROUTER_MODELS }}
       BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
       BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
       DRY_RUN: ${{ inputs.dry_run }}
     steps:
       - uses: actions/checkout@v7
@@ -40,7 +44,7 @@ jobs:
       - name: Check the secrets are set (names only, never values)
         run: |
           missing=0
-          for name in OPENROUTER_API_KEY OPENROUTER_MODELS BLUESKY_HANDLE BLUESKY_APP_PASSWORD; do
+          for name in OPENROUTER_API_KEY OPENROUTER_MODELS BLUESKY_HANDLE BLUESKY_APP_PASSWORD DATABASE_URL; do
             if [ -z "${!name}" ]; then
               echo "::error::repository secret $name is not set"
               missing=1
@@ -57,26 +61,11 @@ jobs:
         run: python -m pip install -r requirements.txt
 
       # The runner uses the direct OpenRouter path (AUTOPILOT_WRITER_RUNTIME is unset, so "direct"); Hermes is not installed here.
-      # The entry point is scripts/run_outer.py; the plan's `python -m loops.outer` has no __main__ here.
+      # scripts.db_run passes its arguments to scripts.run_outer unchanged.
       - name: Run the outer loop
         run: |
           if [ "$DRY_RUN" = "true" ]; then
-            python -m scripts.run_outer --dry-run --no-approve
+            python -m scripts.db_run --dry-run --no-approve
           else
-            python -m scripts.run_outer --measure-only
-          fi
-
-      # Runs even when the loop failed, so a failed run still leaves its trace in the repo as evidence.
-      - name: Commit and push new files under data/
-        if: always()
-        run: |
-          git config user.name "autopilot[bot]"
-          git config user.email "autopilot-bot@users.noreply.github.com"
-          git add data/
-          if git diff --cached --quiet; then
-            echo "nothing new under data/"
-          else
-            git commit -m "data: scheduled run ${GITHUB_RUN_ID}"
-            git pull --rebase
-            git push
+            python -m scripts.db_run --measure-only
           fi

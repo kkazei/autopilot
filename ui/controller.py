@@ -23,7 +23,7 @@ from harness.publish import ApprovedLogError, live_records, utc_now
 APPROVAL_TIMEOUT_S = 15 * 60
 LOG_LIMIT = 400  # messages; a run says a few dozen, so this only bites on a runaway
 EXIT_MEANINGS = {0: "done", 2: "refused", 3: "escalated: needs human review", 4: "failed", 5: "blocked",
-                 6: "another run is active"}
+                 6: "another run is active", 7: "not saved to the database"}
 
 Choice = Literal["approve", "not_now", "reject"]
 # What each button feeds the harness's approval prompt. "Not now" is None: it ends the wait the way the timeout does.
