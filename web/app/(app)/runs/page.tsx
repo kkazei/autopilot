@@ -1,0 +1,47 @@
+import Link from "next/link";
+
+import { Badge, Card, Empty, PageHeader } from "@/components/ui";
+import { requireOwner } from "@/lib/auth";
+import { recentRuns } from "@/lib/db";
+import { ago, utcStamp } from "@/lib/format";
+import { EXIT_MEANINGS, exitTone, runKind, type RunSummary } from "@/lib/parse";
+
+export const dynamic = "force-dynamic";
+
+export default async function Runs() {
+  await requireOwner();
+  const runs = await recentRuns(60);
+  return (
+    <>
+      <PageHeader title="Runs" sub="Every run's trace: model calls, tool calls, guardrails and decisions, in order." />
+      <Card flush>
+        {runs.length === 0 ? <Empty>No runs yet.</Empty> : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left">
+              <thead className="bg-raised">
+                <tr className="t-label text-fg-3">
+                  {["run", "started", "kind", "events", "requests", "result"].map((h) => <th key={h} className="px-5 py-2 font-medium">{h}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r) => {
+                  const s = r.summary ? (JSON.parse(r.summary.summary_out) as RunSummary) : null;
+                  return (
+                    <tr key={r.run_id} className="border-t border-line hover:bg-raised/50">
+                      <td className="px-5 py-3"><Link href={`/runs/${r.run_id}`} className="t-mono-sm text-fg hover:underline">{r.run_id}</Link></td>
+                      <td className="t-small px-5 py-3 text-fg-2" title={utcStamp(r.started_at)}>{ago(r.started_at)}</td>
+                      <td className="t-mono-sm px-5 py-3 text-fg-2">{r.first ? runKind([r.first]) : "—"}</td>
+                      <td className="t-mono-sm px-5 py-3 text-fg-3">{r.n}</td>
+                      <td className="t-mono-sm px-5 py-3 text-fg-3">{s?.requests ? `${s.requests.used}/${s.requests.limit}` : "—"}</td>
+                      <td className="px-5 py-3"><Badge tone={exitTone(s?.exit_code)}>{s ? EXIT_MEANINGS[s.exit_code] ?? `exit ${s.exit_code}` : "running"}</Badge></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
+  );
+}

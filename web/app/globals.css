@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/* Tokens from docs/DESIGN.md. Dark is the default; light follows the system setting. */
+:root {
+  --bg-canvas: #0a0c0f;
+  --bg-surface: #111418;
+  --bg-raised: #181c22;
+  --bg-inset: #07080a;
+  --border-default: #232830;
+  --border-strong: #343a46;
+  --text-primary: #e7e9ec;
+  --text-secondary: #9aa3af;
+  --text-tertiary: #646d7a;
+  --action-primary-bg: #e7e9ec;
+  --action-primary-fg: #0a0c0f;
+  --status-ok: #3fb950;
+  --status-warn: #f2a93b;
+  --status-error: #f85149;
+  --status-info: #58a6ff;
+  --status-ok-bg: rgb(63 185 80 / 0.14);
+  --status-warn-bg: rgb(242 169 59 / 0.14);
+  --status-error-bg: rgb(248 81 73 / 0.14);
+  --status-info-bg: rgb(88 166 255 / 0.14);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-canvas: #f4f5f7;
+    --bg-surface: #ffffff;
+    --bg-raised: #f0f2f4;
+    --bg-inset: #eaedf0;
+    --border-default: #dce0e5;
+    --border-strong: #c3c9d1;
+    --text-primary: #0e1116;
+    --text-secondary: #4f5865;
+    --text-tertiary: #7f8894;
+    --action-primary-bg: #0e1116;
+    --action-primary-fg: #ffffff;
+    --status-ok: #1a7f37;
+    --status-warn: #9a5800;
+    --status-error: #cf222e;
+    --status-info: #0969da;
+    --status-ok-bg: rgb(26 127 55 / 0.1);
+    --status-warn-bg: rgb(191 116 0 / 0.1);
+    --status-error-bg: rgb(207 34 46 / 0.1);
+    --status-info-bg: rgb(9 105 218 / 0.1);
+    color-scheme: light;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-raised: var(--bg-raised);
+  --color-inset: var(--bg-inset);
+  --color-line: var(--border-default);
+  --color-line-strong: var(--border-strong);
+  --color-fg: var(--text-primary);
+  --color-fg-2: var(--text-secondary);
+  --color-fg-3: var(--text-tertiary);
+  --color-primary: var(--action-primary-bg);
+  --color-on-primary: var(--action-primary-fg);
+  --color-ok: var(--status-ok);
+  --color-warn: var(--status-warn);
+  --color-err: var(--status-error);
+  --color-info: var(--status-info);
+  --color-ok-bg: var(--status-ok-bg);
+  --color-warn-bg: var(--status-warn-bg);
+  --color-err-bg: var(--status-error-bg);
+  --color-info-bg: var(--status-info-bg);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+@layer base {
+  body {
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 22px;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--status-info);
+    outline-offset: 2px;
+  }
+}
+
+/* Type styles from the Figma file. */
+@utility t-display { font-size: 28px; line-height: 34px; font-weight: 600; letter-spacing: -0.015em; }
+@utility t-title-lg { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+@utility t-title { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+@utility t-body-lg { font-size: 16px; line-height: 26px; }
+@utility t-small { font-size: 12px; line-height: 18px; }
+@utility t-label { font-family: var(--font-mono); font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+@utility t-mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; }
+@utility t-mono-sm { font-family: var(--font-mono); font-size: 12px; line-height: 18px; }
+@utility t-metric { font-family: var(--font-mono); font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -0.02em; }
