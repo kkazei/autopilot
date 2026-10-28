@@ -78,6 +78,30 @@ The backend is `backend/app.py`, a FastAPI wrapper around the local app's Contro
 
 From this phase the cron reads and writes Postgres and no longer commits `data/`.
 
+## Phase 4: the web app on Vercel
+
+The app is `web/` (Next.js 16, App Router). It reads Neon directly and sends runs, approvals and requeues to the backend
+through `/api/actions`, which only the signed-in owner can call, and only from the app's own origin.
+
+1. **GitHub OAuth apps** (GitHub, Settings, Developer settings, OAuth Apps). One for local dev: homepage `http://localhost:3000`,
+   callback `http://localhost:3000/api/auth/callback/github`. One for production, made after step 2 gives the Vercel URL:
+   homepage `https://<project>.vercel.app`, callback `https://<project>.vercel.app/api/auth/callback/github`.
+2. **Vercel** (vercel.com, Hobby): Add New, Project, import `kkazei/autopilot`, set **Root Directory** to `web`. Framework is
+   detected as Next.js. Add these environment variables (Production), then Deploy:
+
+   | Name | Value |
+   |---|---|
+   | `DATABASE_URL` | the Neon direct URL (same as `.env`) |
+   | `AUTOPILOT_BACKEND_URL` | the Render service URL, e.g. `https://autopilot-api-xxxx.onrender.com` |
+   | `AUTOPILOT_BACKEND_SECRET` | same as `.env` and Render |
+   | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | from the production OAuth app |
+   | `NEXTAUTH_SECRET` | a new random value: `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` |
+   | `NEXTAUTH_URL` | `https://<project>.vercel.app` |
+   | `AUTH_ALLOWED_LOGIN` | `kkazei` |
+
+3. Local dev: copy `web/.env.example` to `web/.env.local`, fill it from `.env` and the local OAuth app, then
+   `cd web && npm install && npm run dev`.
+
 ## Known limits
 
 - Render's free service sleeps after 15 idle minutes; the first request wakes it (about a minute). The web app shows a waking
