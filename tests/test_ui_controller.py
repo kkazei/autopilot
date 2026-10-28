@@ -175,7 +175,7 @@ def test_no_answer_through_the_app_carries_the_post_forward_and_posts_nothing(da
 
 
 def test_status_texts_read_quota_rate_cap_and_plan(data):  # noqa: F811
-    assert "0 of 50 model requests" in controller.quota_text(NOW)
+    assert "0 of 45 model requests" in controller.quota_text(NOW)
     assert controller.rate_text(NOW).startswith("A post can go out now")
     add_published("post_a", age=timedelta(minutes=10))
     assert "minimum gap is 60" in controller.rate_text(NOW)
@@ -194,11 +194,11 @@ def test_not_now_through_the_app_carries_the_post_forward_and_posts_nothing(data
 
 def test_the_budget_line_shows_requests_left_and_warns_when_low(data, monkeypatch):  # noqa: F811
     line = controller.budget_line(NOW)
-    assert "0 / 50" in line and "next run may make 16" in line and "posting: OK now" in line
+    assert "0 / 45" in line and "next run may make 16" in line and "posting: OK now" in line
     assert "Few requests left" not in line
-    monkeypatch.setattr(controller.quota, "run_cap", lambda now: (4, 46, 0))
+    monkeypatch.setattr(controller.quota, "run_cap", lambda now: (4, 41, 0))
     line = controller.budget_line(NOW)
-    assert "46 / 50" in line and "next run may make 4" in line and "Few requests left" in line
+    assert "41 / 45" in line and "next run may make 4" in line and "Few requests left" in line
 
 
 def recording_runner(calls: list[list[str]]) -> Callable:

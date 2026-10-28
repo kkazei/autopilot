@@ -168,7 +168,7 @@ def test_daily_guard_counts_only_llm_calls_from_the_last_24_hours(data):  # noqa
 
 def test_daily_guard_shrinks_the_run_cap_and_reaches_zero(data):  # noqa: F811
     _trace_with_llm_calls(data, "run_a", [NOW - timedelta(hours=1)] * 40)
-    assert quota.run_cap(NOW)[0] == 10
+    assert quota.run_cap(NOW)[0] == quota.DAILY_REQUEST_LIMIT - 40
     _trace_with_llm_calls(data, "run_b", [NOW - timedelta(hours=2)] * 20)
     assert quota.run_cap(NOW)[0] == 0
 
