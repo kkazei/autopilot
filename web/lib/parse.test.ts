@@ -105,3 +105,16 @@ test("the live signature changes exactly when server data can be stale", async (
   assert.notEqual(liveSignature({ ...base, run: { run_id: "r2", finished: false } }), same);
   assert.equal(liveSignature(null), "");
 });
+
+test("the live request count adds only calls made after the page's own count", async () => {
+  const { liveRequestCount } = await import("./parse.ts");
+  const events = [
+    ev({ kind: "llm_call", ts: "2026-10-28T14:00:55Z", ok: false }),
+    ev({ kind: "llm_call", ts: "2026-10-28T14:01:04Z" }),
+    ev({ kind: "decision", ts: "2026-10-28T14:01:05Z" }),
+    ev({ kind: "llm_call", ts: "2026-10-28T14:01:09Z" }),
+  ];
+  assert.equal(liveRequestCount(4, "2026-10-28T14:01:00Z", events), 6, "the 14:00:55 call was already in the server's count");
+  assert.equal(liveRequestCount(4, "2026-10-28T14:02:00Z", events), 4);
+  assert.equal(liveRequestCount(0, "2026-10-28T13:00:00Z", events), 3, "failed attempts count too, like quota.py");
+});

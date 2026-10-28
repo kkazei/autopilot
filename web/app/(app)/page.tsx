@@ -1,13 +1,14 @@
 import Link from "next/link";
 
 import { ApprovalCard, LatestRun, RunButtons, TopicForm } from "@/components/control";
+import { LiveQuota } from "@/components/live-quota";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
-import { Badge, Card, Empty, Meter, PageHeader, Stat } from "@/components/ui";
+import { Badge, Card, Empty, PageHeader, Stat } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { log, planState, recentRuns, requestsLast24h, type Learning } from "@/lib/db";
 import { ago, shortRun, until } from "@/lib/format";
-import { DAILY_REQUEST_LIMIT, EXIT_MEANINGS, exitTone, rateCap, type ApprovedRow, type RunSummary, type Tone } from "@/lib/parse";
+import { EXIT_MEANINGS, exitTone, rateCap, type ApprovedRow, type RunSummary, type Tone } from "@/lib/parse";
 import { dateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function Control() {
   const lastSummary = lastRun?.summary ? (JSON.parse(lastRun.summary.summary_out) as RunSummary) : null;
   const learning = learnings.at(-1);
   const learningTopic = learning && state.posts.find((p) => p.id === learning.post_id)?.topic;
-  const left = DAILY_REQUEST_LIMIT - used;
+
 
   return (
     <>
@@ -39,9 +40,7 @@ export default async function Control() {
       </PageHeader>
 
       <Reveal className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
-        <Stat label="model requests · 24h" value={<><CountUp value={used} />/{DAILY_REQUEST_LIMIT}</>} sub={left > 0 ? `${left} left · a run uses up to 16` : "daily cap reached"}>
-          <Meter used={used} max={DAILY_REQUEST_LIMIT} />
-        </Stat>
+        <LiveQuota base={used} baseAt={now.toISOString()} />
         <Stat label="next post" value={next ? dateLabel(next.day) : "—"} sub={next ? `${next.topic} · ${next.goal}` : "queue empty: plan next week"} />
         <Stat label="rate cap" value={cap.open ? "open" : "closed"}
           sub={cap.open ? <><CountUp value={cap.inWindow} />/3 in 24h · {cap.last ? `last post ${ago(cap.last.toISOString())}` : "no posts yet"}</> : `opens ${cap.opensAt ? until(cap.opensAt.toISOString(), now.getTime()) : "soon"}`} />
