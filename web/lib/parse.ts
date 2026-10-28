@@ -196,3 +196,10 @@ export function rateCap(rows: ApprovedRow[], now: Date, maxPerDay = 3, minGapMin
   const opensAt = Math.max(gapOpensAt, windowOpensAt);
   return { open: opensAt <= now.getTime(), opensAt: opensAt > now.getTime() ? new Date(opensAt) : null, inWindow: inWindow.length, last: last === null ? null : new Date(last) };
 }
+
+/** What the server-rendered parts of a page depend on. When it changes (a run starts or ends, an approval opens or is
+ * answered), the page re-fetches its server data, so the stat tiles and lists do not go stale behind the live panel. */
+export function liveSignature(live: { status: { running: boolean; approval: { id: number } | null } | null; run: { run_id: string; finished: boolean } | null } | null): string {
+  if (!live) return "";
+  return [live.run?.run_id ?? "-", live.run?.finished ? "done" : "open", live.status?.running ? "running" : "idle", live.status?.approval?.id ?? "-"].join("|");
+}

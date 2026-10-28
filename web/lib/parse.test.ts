@@ -94,3 +94,14 @@ test("rate cap counts live and unsettled pending posts, never dry runs", async (
   assert.equal(capped.open, false);
   assert.equal(capped.inWindow, 3);
 });
+
+test("the live signature changes exactly when server data can be stale", async () => {
+  const { liveSignature } = await import("./parse.ts");
+  const base = { status: { running: true, approval: null }, run: { run_id: "r1", finished: false } };
+  const same = liveSignature(base);
+  assert.equal(liveSignature({ ...base }), same, "a plain poll with nothing new does not refresh");
+  assert.notEqual(liveSignature({ ...base, status: { running: true, approval: { id: 1 } } }), same);
+  assert.notEqual(liveSignature({ status: { running: false, approval: null }, run: { run_id: "r1", finished: true } }), same);
+  assert.notEqual(liveSignature({ ...base, run: { run_id: "r2", finished: false } }), same);
+  assert.equal(liveSignature(null), "");
+});
