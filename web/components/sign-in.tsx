@@ -1,16 +1,6 @@
 "use client";
 
-import { signIn, signOut } from "next-auth/react";
-
-import { buttonClass } from "./ui";
-
-export function SignIn() {
-  return (
-    <button className={buttonClass("primary", "w-full")} onClick={() => signIn("github", { callbackUrl: "/" })}>
-      Sign in with GitHub
-    </button>
-  );
-}
+import { signOut } from "next-auth/react";
 
 export function SignOut() {
   return (

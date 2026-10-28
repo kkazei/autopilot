@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .loop { stroke: #0e1116; }
+    .dot { fill: #bf7400; }
+    @media (prefers-color-scheme: dark) { .loop { stroke: #e7e9ec; } .dot { fill: #f2a93b; } }
+  </style>
+  <g class="loop" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M25.2 12.2A10 10 0 1 0 26 17"/>
+    <path d="M26.6 7.6v5.2h-5.2"/>
+  </g>
+  <circle class="dot" cx="16" cy="16" r="3.8"/>
+</svg>
