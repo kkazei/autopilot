@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { Live } from "@/app/api/live/route";
+import { liveSignature } from "@/lib/parse";
 
 type ActResult = { ok: boolean; message: string };
 type LiveState = {
@@ -31,6 +33,14 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [waking, setWaking] = useState(false);
   const lastWake = useRef(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const router = useRouter();
+  const signature = useRef<string | null>(null);
+
+  useEffect(() => {
+    const next = liveSignature(live);
+    if (signature.current !== null && next !== signature.current) router.refresh();
+    signature.current = next;
+  }, [live, router]);
 
   const wake = useCallback(async () => {
     if (Date.now() - lastWake.current < WAKE_RETRY_MS) return;
