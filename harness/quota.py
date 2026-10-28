@@ -1,8 +1,9 @@
 """How many model requests a run may still make today, counted from the traces already on disk.
 
-OpenRouter's free tier allows about 50 requests a day (unconfirmed for this account, ISSUES_LOG 18). Counting
-`llm_call` events is conservative: it includes every failed attempt (429s too), which may not match how
-OpenRouter counts, but it never undercounts what this repo sent.
+OpenRouter's free tier allows about 50 requests a day (unconfirmed for this account, ISSUES_LOG 18). The limit here is
+45, a hard stop that leaves headroom while the local app and the hosted app share one key. Counting `llm_call`
+events is conservative: it includes every failed attempt (429s too), which may not match how OpenRouter counts,
+but it never undercounts what this repo sent.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from harness import trace
 
-DAILY_REQUEST_LIMIT = 50
+DAILY_REQUEST_LIMIT = 45
 RUN_REQUEST_CAP = 16
 MEASURE_REQUEST_CAP = 4
 WINDOW = timedelta(hours=24)
