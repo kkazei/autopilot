@@ -203,3 +203,10 @@ export function liveSignature(live: { status: { running: boolean; approval: { id
   if (!live) return "";
   return [live.run?.run_id ?? "-", live.run?.finished ? "done" : "open", live.status?.running ? "running" : "idle", live.status?.approval?.id ?? "-"].join("|");
 }
+
+/** The 24-hour request count between page loads: the count the server rendered at `baseAt`, plus every model call
+ * the live run has made since. A reload replaces both, so no call is counted twice. */
+export function liveRequestCount(base: number, baseAt: string, events: TraceEvent[]): number {
+  const since = Date.parse(baseAt);
+  return base + events.filter((e) => e.kind === "llm_call" && Date.parse(e.ts) > since).length;
+}

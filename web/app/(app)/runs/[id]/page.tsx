@@ -1,10 +1,13 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 
+import { Reveal } from "@/components/motion";
+import { Time } from "@/components/time";
+import { TraceLanes } from "@/components/trace-lanes";
 import { Badge, Card, cx, Dot, PageHeader, Stat } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { runEvents } from "@/lib/db";
-import { utcStamp, utcTime } from "@/lib/format";
 import { durationSeconds, EXIT_MEANINGS, exitTone, runKind, runSummary, shortModel, type TraceEvent } from "@/lib/parse";
 
 export const dynamic = "force-dynamic";
@@ -39,18 +42,22 @@ export default async function RunTrace({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <PageHeader crumb={<><Link href="/runs" className="hover:text-fg">Runs</Link>  /  {id}</>}
-        title={<span className="flex flex-wrap items-center gap-3">{utcStamp(run.started_at)} · {runKind(events)}
+      <PageHeader crumb={<><Link href="/runs" className="hover:text-fg">Traces</Link>  /  {id}</>}
+        title={<span className="flex flex-wrap items-center gap-3"><Time iso={run.started_at} kind="stamp" /> · {runKind(events)}
           <Badge tone={exitTone(summary?.exit_code)}>{summary ? EXIT_MEANINGS[summary.exit_code] ?? `exit ${summary.exit_code}` : "running"}</Badge>
           {summary?.dry_run && <Badge tone="info">dry run</Badge>}</span>} />
 
-      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
+      <Reveal className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
         <Stat label="duration" value={dur === null ? "—" : `${dur}s`} sub={summary ? "first to last event" : "still running"} />
         <Stat label="model requests" value={llm.length} sub={`${llm.filter((e) => !e.ok).length} failed (429s, timeouts)`} />
         <Stat label="models" value={models.length} sub={models.join(" → ") || "none"} />
         <Stat label="guardrails" value={`${guards.filter((e) => e.ok).length}/${guards.length}`} sub="pre-check and publish re-check" />
         <Stat label="events" value={events.length} sub="redacted before they are written" />
-      </div>
+      </Reveal>
+
+      <Card title="Timeline" right={<span className="hidden sm:inline">click a bar to open the event</span>}>
+        <TraceLanes runId={id} events={events} selected={selected} live={!summary} />
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_352px]">
         <Card flush className="min-w-0 overflow-hidden">
@@ -97,7 +104,7 @@ function TraceRow({ e, href, selected }: { e: TraceEvent; href: string; selected
     <Link href={href} scroll={false} aria-current={selected ? "true" : undefined}
       className={cx("grid grid-cols-[64px_8px_64px_80px_minmax(0,1fr)_150px_56px] items-center gap-3 border-b border-line px-3 py-2 hover:bg-raised/60",
         selected && "border-l-2 border-l-info bg-raised")}>
-      <span className="t-mono-sm text-fg-3">{utcTime(e.ts)}</span>
+      <Time iso={e.ts} kind="time" className="t-mono-sm text-fg-3" />
       <Dot tone={e.ok ? "ok" : "error"} className="size-2" />
       <span className="t-mono-sm text-fg-2">{e.agent}</span>
       <span className="t-mono-sm text-fg-3">{e.kind}</span>
@@ -109,7 +116,7 @@ function TraceRow({ e, href, selected }: { e: TraceEvent; href: string; selected
 }
 
 function EventDetail({ e }: { e: TraceEvent }) {
-  const fields: [string, string][] = [["time", `${e.ts.slice(0, 10)} ${utcTime(e.ts)} utc`], ["model", e.model ?? "—"], ["latency", e.latency_ms ? `${e.latency_ms} ms` : "—"]];
+  const fields: [string, ReactNode][] = [["time", <><Time iso={e.ts} kind="stamp" /> · <Time iso={e.ts} kind="time" zone /></>], ["model", e.model ?? "—"], ["latency", e.latency_ms ? `${e.latency_ms} ms` : "—"]];
   const tokens = e.summary_out.match(/tokens in=(\d+|None) out=(\d+|None)/);
   if (tokens) fields.push(["tokens", `in ${tokens[1]} · out ${tokens[2]}`]);
   return (

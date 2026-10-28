@@ -81,3 +81,27 @@ Geist and Geist Mono (`next/font` ships both).
 - When the backend is asleep (Render free tier), the system light is grey with "waking…" and the run buttons are disabled
   until `/health` answers.
 - Red appears only for failures and Reject; amber only for things waiting on the owner.
+
+## Motion (added with the KokonutUI pass)
+
+Purposeful only: what changes state animates; nothing loops for decoration. Everything follows the system's
+reduce-motion setting (`MotionConfig reducedMotion="user"`). Ease-out `cubic-bezier(0.23, 1, 0.32, 1)`, 200–350 ms.
+
+- **Entry**: cards rise 8px and unblur in a 50–70 ms stagger, once per page load.
+- **Numbers** count from their previous value (quota, rate cap, exit code).
+- **Approval card** slides in with a blur, its amber ring breathes slowly while it waits, scores and guardrails stagger in.
+  Live posts use a **hold-to-publish** button (1.5 s); dry runs stay a single click.
+- **Live steps** stream in from the left; the run badge crossfades between running, waiting and the result.
+- **Run island** (KokonutUI Status Island): a pill at the bottom of every page while a run is live, with a Trace or Review
+  action; it reports the result for 5 s after the run ends.
+- **Run timeline** (adapted from KokonutUI AI Agent Lanes): one lane per agent on a shared clock. A finished run replays
+  in about 3.5 s; a live run follows the newest event. Bars: blue model call, red failure, green guardrail, amber the wait
+  for the owner, solid tool call, hatched decision. Clicking a bar opens that event.
+
+KokonutUI components live in `web/components/kokonutui/` (MIT, attribution kept in each file).
+
+## Time
+
+Every instant is shown in the viewer's timezone (24-hour), read from the browser and remembered in a `tz` cookie so
+server-rendered pages match. Plan days are calendar dates and never shift. The zone offset (GMT+8) is shown where a time
+stands alone, such as the trace detail and the cron slot.

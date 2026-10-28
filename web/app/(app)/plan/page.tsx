@@ -2,7 +2,8 @@ import { RequeueButton } from "@/components/requeue";
 import { Badge, Card, Empty, PageHeader } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { planState } from "@/lib/db";
-import { utcDay, utcStamp } from "@/lib/format";
+import { Time } from "@/components/time";
+import { dateLabel } from "@/lib/time";
 import type { Tone } from "@/lib/parse";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function Plan() {
       {plans.map((plan) => {
         const posts = state.posts.filter((p) => p.plan_id === plan.plan_id);
         return (
-          <Card key={plan.plan_id} flush title={`Week of ${plan.week_of}`} right={`${plan.plan_id} · ${utcStamp(plan.created_at)}`}>
+          <Card key={plan.plan_id} flush title={`Week of ${plan.week_of}`} right={<>{plan.plan_id} · <Time iso={plan.created_at} kind="stamp" /></>}>
             <p className="t-small px-5 pb-4 text-fg-2">{plan.rationale}</p>
             {posts.length === 0 ? <Empty>No posts.</Empty> : (
               <ul>
@@ -28,7 +29,7 @@ export default async function Plan() {
                   <li key={p.id} className="border-t border-line px-5 py-3">
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 md:gap-4">
-                        <span className="t-mono-sm w-14 shrink-0 text-fg-3">{utcDay(p.day)}</span>
+                        <span className="t-mono-sm w-14 shrink-0 text-fg-3">{dateLabel(p.day)}</span>
                         <span className="flex min-w-0 flex-1 flex-col">
                           <span className="truncate text-sm font-medium">{p.topic}</span>
                           <span className="t-small truncate text-fg-2">{p.angle}</span>
@@ -41,7 +42,7 @@ export default async function Plan() {
                         <ol className="flex flex-col gap-1">
                           {p.history.map((h, i) => (
                             <li key={i} className="t-mono-sm flex flex-wrap gap-x-3 text-fg-2">
-                              <span className="text-fg-3">{utcStamp(h.at)}</span><span>{h.status}</span><span className="text-fg-3">{h.reason}</span>
+                              <Time iso={h.at} kind="stamp" className="text-fg-3" /><span>{h.status}</span><span className="text-fg-3">{h.reason}</span>
                             </li>
                           ))}
                         </ol>
