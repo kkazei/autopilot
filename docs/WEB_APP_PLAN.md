@@ -61,6 +61,26 @@ Never paste a secret into chat or a commit. Put each in `.env` locally and in th
 5. When `.env` has `DATABASE_URL`, run the one-time import:
    `.venv\Scripts\python -m scripts.db_import`
 
+## Phase 2: wiring the backend (after the Phase 2 PR is merged)
+
+The backend is `backend/app.py`, a FastAPI wrapper around the local app's Controller. Every run is wrapped in
+`db_sync.hosted_data_dir`. Routes: `GET /health` (open), and with the `X-Autopilot-Secret` header `GET /status`,
+`POST /runs` (`next`, `topic`, `plan`), `POST /approvals/{id}` and `POST /posts/{id}/requeue`.
+
+1. **A backend secret.** Generate one and keep it in `.env` as `AUTOPILOT_BACKEND_SECRET` (Vercel gets it in Phase 4):
+   `.venv\Scripts\python -c "import secrets; print(secrets.token_hex(32))"`
+2. **Space secrets** (Space, Settings, Variables and secrets, New secret): `OPENROUTER_API_KEY`, `OPENROUTER_MODELS`,
+   `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD`, `DATABASE_URL`, `AUTOPILOT_BACKEND_SECRET`. Do not set `AUTOPILOT_WRITER_RUNTIME`:
+   the Space runs the direct OpenRouter path, like the cron.
+3. **GitHub** (repository, Settings, Secrets and variables, Actions):
+   - secret `DATABASE_URL` (the cron): `grep '^DATABASE_URL=' .env | cut -d= -f2- | gh secret set DATABASE_URL`
+   - secret `HF_TOKEN`: the Hugging Face **write** token
+   - variable `HF_SPACE`: `<hf-user>/autopilot-api` (`gh variable set HF_SPACE --body "<hf-user>/autopilot-api"`)
+4. Merging to master deploys the Space (`deploy-space.yml`); it can also be run by hand from the Actions tab.
+   Check it with `curl https://<hf-user>-autopilot-api.hf.space/health -H "Authorization: Bearer <HF read token>"`.
+
+From this phase the cron reads and writes Postgres and no longer commits `data/`.
+
 ## Known limits
 
 - The Space sleeps after about 48 hours idle; the first request wakes it (about a minute). The web app shows a waking state.
