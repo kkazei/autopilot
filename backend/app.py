@@ -4,11 +4,11 @@ It is the local app's Controller behind HTTP, with every run wrapped in db_sync.
 is the terminal's run_outer on a working folder pulled from Postgres. The web app reads plans, posts and traces
 from Postgres directly; this server only does what needs the secrets (model calls and Bluesky).
 
-Auth is a shared secret in X-Autopilot-Secret, compared in constant time. It is not the Authorization header:
-on a private Hugging Face Space that header carries the HF token, which the Space's proxy consumes.
-Run with one worker (`--workers 1`): the run and its pending approval live in this process.
+Auth is a shared secret in X-Autopilot-Secret, compared in constant time; only /health is open, so the free
+host's public URL can be woken without the secret. Run with one worker (`--workers 1`): the run and its pending
+approval live in this process. Deployed to Render from render.yaml and backend/Dockerfile.
 
-    uvicorn --factory backend.app:create_app --port 7860 --workers 1
+    uvicorn --factory backend.app:create_app --port 10000 --workers 1
 """
 
 from __future__ import annotations
@@ -134,7 +134,7 @@ def create_app(controller: Controller | None = None, secret: str | None = None) 
 
     @app.get("/health")
     def health() -> dict[str, bool]:
-        """Open and empty, so the web app can wake a sleeping Space without sending the secret."""
+        """Open and empty, so the web app can wake a sleeping service without sending the secret."""
         return {"ok": True}
 
     @app.get("/status", dependencies=auth)

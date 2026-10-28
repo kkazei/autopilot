@@ -1,20 +1,24 @@
-# The hosted backend on a Hugging Face Space (Docker SDK, free CPU). scripts/deploy_space.py copies this file to the
-# root of the Space with only the code the backend needs; data/ is never shipped (Postgres is the source of truth).
-# Secrets (OPENROUTER_API_KEY, OPENROUTER_MODELS, BLUESKY_HANDLE, BLUESKY_APP_PASSWORD, DATABASE_URL,
-# AUTOPILOT_BACKEND_SECRET) are set in the Space settings and arrive as environment variables at run time.
+# The hosted backend on Render's free web service (render.yaml points here; the build context is the repo root).
+# Only the code the backend runs is copied, by name, so data/, .env, tests and the Gradio page never enter the image:
+# Postgres is the source of truth, and secrets arrive as environment variables set in the Render dashboard.
 FROM python:3.11-slim
 
-# Spaces run the container as uid 1000; owning the app directory as that user avoids permission errors.
 RUN useradd -m -u 1000 user
 WORKDIR /app
 
 COPY requirements.txt requirements-api.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-api.txt
 
-COPY --chown=user . .
+COPY --chown=user agents/ agents/
+COPY --chown=user backend/ backend/
+COPY --chown=user harness/ harness/
+COPY --chown=user loops/ loops/
+COPY --chown=user mcp_server/ mcp_server/
+COPY --chown=user scripts/ scripts/
+COPY --chown=user ui/__init__.py ui/controller.py ui/
 USER user
-ENV PYTHONUNBUFFERED=1 HOME=/home/user
+ENV PYTHONUNBUFFERED=1 HOME=/home/user PORT=10000
 
-EXPOSE 7860
-# One worker: the running job and its pending approval live in this process.
-CMD ["uvicorn", "--factory", "backend.app:create_app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
+EXPOSE 10000
+# Render sets PORT. One worker: the running job and its pending approval live in this process.
+CMD ["sh", "-c", "exec uvicorn --factory backend.app:create_app --host 0.0.0.0 --port \"$PORT\" --workers 1"]
