@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { Tone } from "@/lib/parse";
+import { cn } from "@/lib/utils";
 
 // The Figma components (docs/DESIGN.md), one to one.
 
@@ -50,7 +51,7 @@ const BTN = {
   ghost: "text-fg-2 hover:text-fg hover:bg-raised",
 };
 export const buttonClass = (kind: keyof typeof BTN, extra?: string) =>
-  cx("inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50", BTN[kind], extra);
+  cn("inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50", BTN[kind], extra);
 
 export function Card({ children, className, title, right, flush }: { children: ReactNode; className?: string; title?: ReactNode; right?: ReactNode; flush?: boolean }) {
   return (
