@@ -25,8 +25,8 @@ export default async function Plan() {
             <p className="t-small px-5 pb-4 text-fg-2">{plan.rationale}</p>
             {posts.length === 0 ? <Empty>No posts.</Empty> : (
               <ul>
-                {posts.map((p) => (
-                  <li key={p.id} className="border-t border-line px-5 py-3">
+                {posts.map((p, idx) => (
+                  <li key={p.id} className="animate-rise border-t border-line px-5 py-3 transition-colors hover:bg-raised/30" style={{ animationDelay: `${Math.min(idx, 24) * 22}ms` }}>
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 md:gap-4">
                         <span className="t-mono-sm w-14 shrink-0 text-fg-3">{dateLabel(p.day)}</span>

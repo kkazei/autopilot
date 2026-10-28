@@ -25,10 +25,10 @@ export default async function Runs() {
                 </tr>
               </thead>
               <tbody>
-                {runs.map((r) => {
+                {runs.map((r, idx) => {
                   const s = r.summary ? (JSON.parse(r.summary.summary_out) as RunSummary) : null;
                   return (
-                    <tr key={r.run_id} className="border-t border-line transition-colors hover:bg-raised/50">
+                    <tr key={r.run_id} className="animate-rise border-t border-line transition-colors hover:bg-raised/50" style={{ animationDelay: `${Math.min(idx, 24) * 22}ms` }}>
                       <td className="px-5 py-3"><Link href={`/runs/${r.run_id}`} className="t-mono-sm text-fg hover:underline">{r.run_id}</Link></td>
                       <td className="t-small px-5 py-3 text-fg-2"><Time iso={r.started_at} kind="stamp" /> <span className="text-fg-3">· {ago(r.started_at)}</span></td>
                       <td className="t-mono-sm px-5 py-3 text-fg-2">{r.first ? runKind([r.first]) : "—"}</td>

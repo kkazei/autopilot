@@ -69,7 +69,7 @@ export function Card({ children, className, title, right, flush }: { children: R
 
 export function Stat({ label, value, sub, children }: { label: string; value: ReactNode; sub: ReactNode; children?: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-4">
+    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong">
       <span className="t-label text-fg-3">{label}</span>
       <span className="t-metric truncate">{value}</span>
       {children}
