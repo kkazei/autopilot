@@ -101,3 +101,15 @@
 @utility t-mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; }
 @utility t-mono-sm { font-family: var(--font-mono); font-size: 12px; line-height: 18px; }
 @utility t-metric { font-family: var(--font-mono); font-size: 28px; line-height: 32px; font-weight: 500; letter-spacing: -0.02em; }
+
+/* Server-rendered lists stagger in with plain CSS (no client JS per row); the delay comes from the row index. */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@utility animate-rise {
+  animation: rise-in 0.35s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+}

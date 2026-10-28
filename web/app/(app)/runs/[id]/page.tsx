@@ -82,7 +82,7 @@ export default async function RunTrace({ params, searchParams }: { params: Promi
               <div className="t-label grid grid-cols-[64px_8px_64px_80px_minmax(0,1fr)_150px_56px] gap-3 bg-raised px-3 py-2 text-fg-3">
                 <span>time</span><span /><span>agent</span><span>kind</span><span>summary</span><span>model</span><span className="text-right">ms</span>
               </div>
-              {rows.map(([e, i]) => <TraceRow key={i} e={e} href={href({ e: String(i) })} selected={i === selected} />)}
+              {rows.map(([e, i], n) => <TraceRow key={i} e={e} n={n} href={href({ e: String(i) })} selected={i === selected} />)}
               {rows.length === 0 && <p className="t-small px-5 py-4 text-fg-3">No events match.</p>}
             </div>
           </div>
@@ -99,10 +99,10 @@ function summaryText(e: TraceEvent) {
   return `${head} → ${e.summary_out}`;
 }
 
-function TraceRow({ e, href, selected }: { e: TraceEvent; href: string; selected: boolean }) {
+function TraceRow({ e, n, href, selected }: { e: TraceEvent; n: number; href: string; selected: boolean }) {
   return (
-    <Link href={href} scroll={false} aria-current={selected ? "true" : undefined}
-      className={cx("grid grid-cols-[64px_8px_64px_80px_minmax(0,1fr)_150px_56px] items-center gap-3 border-b border-line px-3 py-2 hover:bg-raised/60",
+    <Link href={href} scroll={false} aria-current={selected ? "true" : undefined} style={{ animationDelay: `${Math.min(n, 24) * 22}ms` }}
+      className={cx("animate-rise grid grid-cols-[64px_8px_64px_80px_minmax(0,1fr)_150px_56px] items-center gap-3 border-b border-line px-3 py-2 hover:bg-raised/60",
         selected && "border-l-2 border-l-info bg-raised")}>
       <Time iso={e.ts} kind="time" className="t-mono-sm text-fg-3" />
       <Dot tone={e.ok ? "ok" : "error"} className="size-2" />
