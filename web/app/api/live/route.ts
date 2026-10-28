@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     backend: status ? "up" : "down",
     status,
     run: run && {
-      run_id: run.run_id, updated_at: run.updated_at, events: run.events.slice(-40), finished: runSummary(run.events) !== null,
+      run_id: run.run_id, updated_at: run.updated_at, events: run.events.slice(-300), finished: runSummary(run.events) !== null,
       critique: latestCritique(run.events), guardrails: latestGuardrails(run.events),
     },
   };

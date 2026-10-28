@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Badge, Card, Empty, PageHeader } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { recentRuns } from "@/lib/db";
-import { ago, utcStamp } from "@/lib/format";
+import { Time } from "@/components/time";
+import { ago } from "@/lib/format";
 import { EXIT_MEANINGS, exitTone, runKind, type RunSummary } from "@/lib/parse";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function Runs() {
   const runs = await recentRuns(60);
   return (
     <>
-      <PageHeader title="Runs" sub="Every run's trace: model calls, tool calls, guardrails and decisions, in order." />
+      <PageHeader title="Traces" sub="Every run, step by step: model calls, tool calls, guardrails and decisions. Open one to see its timeline." />
       <Card flush>
         {runs.length === 0 ? <Empty>No runs yet.</Empty> : (
           <div className="overflow-x-auto">
@@ -27,9 +28,9 @@ export default async function Runs() {
                 {runs.map((r) => {
                   const s = r.summary ? (JSON.parse(r.summary.summary_out) as RunSummary) : null;
                   return (
-                    <tr key={r.run_id} className="border-t border-line hover:bg-raised/50">
+                    <tr key={r.run_id} className="border-t border-line transition-colors hover:bg-raised/50">
                       <td className="px-5 py-3"><Link href={`/runs/${r.run_id}`} className="t-mono-sm text-fg hover:underline">{r.run_id}</Link></td>
-                      <td className="t-small px-5 py-3 text-fg-2" title={utcStamp(r.started_at)}>{ago(r.started_at)}</td>
+                      <td className="t-small px-5 py-3 text-fg-2"><Time iso={r.started_at} kind="stamp" /> <span className="text-fg-3">· {ago(r.started_at)}</span></td>
                       <td className="t-mono-sm px-5 py-3 text-fg-2">{r.first ? runKind([r.first]) : "—"}</td>
                       <td className="t-mono-sm px-5 py-3 text-fg-3">{r.n}</td>
                       <td className="t-mono-sm px-5 py-3 text-fg-3">{s?.requests ? `${s.requests.used}/${s.requests.limit}` : "—"}</td>

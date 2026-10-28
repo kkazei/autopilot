@@ -11,7 +11,7 @@ const ICONS = {
   dashboard: "M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z",
   calendar: "M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
   bulb: "M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z",
-  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01", refresh: "M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5",
+  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01", activity: "M22 12h-4l-3 9L9 3l-3 9H2", refresh: "M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5",
 } as const;
 export type IconName = keyof typeof ICONS;
 
