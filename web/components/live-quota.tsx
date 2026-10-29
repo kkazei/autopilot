@@ -11,7 +11,7 @@ export function LiveQuota({ base, baseAt }: { base: number; baseAt: string }) {
   const used = liveRequestCount(base, baseAt, live?.run?.events ?? []);
   const left = DAILY_REQUEST_LIMIT - used;
   return (
-    <Stat label="model requests · 24h" value={<><CountUp value={used} />/{DAILY_REQUEST_LIMIT}</>}
+    <Stat label="requests · 24h" value={<><CountUp value={used} />/{DAILY_REQUEST_LIMIT}</>}
       sub={left > 0 ? `${left} left · a run uses up to 16` : "daily cap reached"}>
       <Meter used={used} max={DAILY_REQUEST_LIMIT} />
     </Stat>

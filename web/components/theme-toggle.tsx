@@ -54,7 +54,7 @@ export function ThemeSegmented({ id, className }: { id: string; className?: stri
       {OPTIONS.map(([value, label, IconC]) => (
         <button key={value} type="button" role="radio" aria-checked={theme === value} aria-label={label} title={label} onClick={(e) => choose(value, e)}
           className={cx("relative grid h-7 flex-1 place-items-center rounded-[10px] transition-colors duration-150", theme === value ? "text-fg" : "text-fg-3 hover:text-fg-2")}>
-          {theme === value && <motion.span layoutId={`theme-lens-${id}`} className="glass-lens absolute inset-0 rounded-[10px]" transition={{ duration: 0.3, ease: EASE_OUT }} />}
+          {theme === value && <motion.span layoutId={`theme-lens-${id}`} className="matte-lens absolute inset-0 rounded-[10px]" transition={{ duration: 0.3, ease: EASE_OUT }} />}
           <IconC className="relative size-3.5" />
         </button>
       ))}

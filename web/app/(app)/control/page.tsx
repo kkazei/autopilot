@@ -39,7 +39,7 @@ export default async function Control() {
         <RunButtons />
       </PageHeader>
 
-      <Reveal className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+      <Reveal className="grid auto-rows-fr grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         <LiveQuota base={used} baseAt={now.toISOString()} />
         <Stat label="next post" value={next ? dateLabel(next.day) : "—"} sub={next ? `${next.topic} · ${next.goal}` : "queue empty: plan next week"} />
         <Stat label="rate cap" value={cap.open ? "open" : "closed"}

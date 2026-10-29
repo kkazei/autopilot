@@ -47,7 +47,7 @@ export default async function RunTrace({ params, searchParams }: { params: Promi
           <Badge tone={exitTone(summary?.exit_code)}>{summary ? EXIT_MEANINGS[summary.exit_code] ?? `exit ${summary.exit_code}` : "running"}</Badge>
           {summary?.dry_run && <Badge tone="info">dry run</Badge>}</span>} />
 
-      <Reveal className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
+      <Reveal className="grid auto-rows-fr grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
         <Stat label="duration" value={dur === null ? "—" : `${dur}s`} sub={summary ? "first to last event" : "still running"} />
         <Stat label="model requests" value={llm.length} sub={`${llm.filter((e) => !e.ok).length} failed (429s, timeouts)`} />
         <Stat label="models" value={models.length} sub={models.join(" → ") || "none"} />

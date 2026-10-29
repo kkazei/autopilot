@@ -19,7 +19,7 @@ export function Reveal({ children, className, step = 0.05 }: { children: ReactNo
       {Children.map(children, (child) =>
         child == null ? null : (
           <motion.div variants={{ hidden: { opacity: 0, y: 8, filter: "blur(3px)" }, shown: { opacity: 1, y: 0, filter: "blur(0px)" } }}
-            transition={{ duration: 0.35, ease: EASE_OUT }} className="min-w-0">
+            transition={{ duration: 0.35, ease: EASE_OUT }} className="flex min-w-0 flex-col">
             {child}
           </motion.div>
         ),

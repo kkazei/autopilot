@@ -67,13 +67,15 @@ export function Card({ children, className, title, right, flush }: { children: R
   );
 }
 
-export function Stat({ label, value, sub, children }: { label: string; value: ReactNode; sub: ReactNode; children?: ReactNode }) {
+/** Tiles in a row share one height (flex-1 inside Reveal's wrapper), with the value on one line and the note at the
+ * bottom, so a tile with a meter or a long note never sits taller than its neighbours. */
+export function Stat({ label, value, sub, children }: { label: string; value: ReactNode; sub?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong">
-      <span className="t-label text-fg-3">{label}</span>
+    <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong">
+      <span className="t-label truncate text-fg-3" title={label}>{label}</span>
       <span className="t-metric truncate">{value}</span>
       {children}
-      <span className="t-small text-fg-2">{sub}</span>
+      {sub && <span className="t-small mt-auto line-clamp-2 text-fg-2">{sub}</span>}
     </div>
   );
 }

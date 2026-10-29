@@ -29,13 +29,11 @@
   --status-warn-bg: rgb(242 169 59 / 0.14);
   --status-error-bg: rgb(248 81 73 / 0.14);
   --status-info-bg: rgb(88 166 255 / 0.14);
-  /* Glass: translucent fill, a light top edge and a darker bottom edge, the way a lens catches light. */
-  --glass-fill: rgb(22 26 32 / 0.62);
-  --glass-lens: rgb(255 255 255 / 0.08);
-  --glass-edge: rgb(255 255 255 / 0.09);
-  --glass-hi: rgb(255 255 255 / 0.14);
-  --glass-lo: rgb(0 0 0 / 0.35);
-  --glass-shadow: 0 12px 40px -12px rgb(0 0 0 / 0.7);
+  /* Matte: a near-solid frosted surface with a hairline border and a soft shadow; no shine. */
+  --matte-fill: rgb(17 20 24 / 0.92);
+  --matte-lens: rgb(255 255 255 / 0.065);
+  --matte-edge: var(--border-default);
+  --matte-shadow: 0 10px 30px -14px rgb(0 0 0 / 0.65);
   color-scheme: dark;
 }
 
@@ -61,12 +59,10 @@
     --status-warn-bg: rgb(191 116 0 / 0.1);
     --status-error-bg: rgb(207 34 46 / 0.1);
     --status-info-bg: rgb(9 105 218 / 0.1);
-    --glass-fill: rgb(255 255 255 / 0.66);
-    --glass-lens: rgb(14 17 22 / 0.06);
-    --glass-edge: rgb(14 17 22 / 0.08);
-    --glass-hi: rgb(255 255 255 / 0.9);
-    --glass-lo: rgb(14 17 22 / 0.06);
-    --glass-shadow: 0 12px 40px -14px rgb(14 17 22 / 0.28);
+    --matte-fill: rgb(255 255 255 / 0.9);
+    --matte-lens: rgb(14 17 22 / 0.06);
+    --matte-edge: var(--border-default);
+    --matte-shadow: 0 10px 30px -16px rgb(14 17 22 / 0.25);
     color-scheme: light;
   }
 }
@@ -90,12 +86,10 @@
   --status-warn-bg: rgb(191 116 0 / 0.1);
   --status-error-bg: rgb(207 34 46 / 0.1);
   --status-info-bg: rgb(9 105 218 / 0.1);
-  --glass-fill: rgb(255 255 255 / 0.66);
-  --glass-lens: rgb(14 17 22 / 0.06);
-  --glass-edge: rgb(14 17 22 / 0.08);
-  --glass-hi: rgb(255 255 255 / 0.9);
-  --glass-lo: rgb(14 17 22 / 0.06);
-  --glass-shadow: 0 12px 40px -14px rgb(14 17 22 / 0.28);
+  --matte-fill: rgb(255 255 255 / 0.9);
+  --matte-lens: rgb(14 17 22 / 0.06);
+  --matte-edge: var(--border-default);
+  --matte-shadow: 0 10px 30px -16px rgb(14 17 22 / 0.25);
   color-scheme: light;
 }
 
@@ -171,21 +165,20 @@
   .animate-rise { animation: none; }
 }
 
-/* Liquid-glass surfaces for the navigation that floats over content (sidebar, tab bar, phone header). */
-@utility glass {
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid var(--glass-edge);
-  box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 -1px 0 var(--glass-lo), var(--glass-shadow);
+/* Matte surfaces for the navigation that floats over content (sidebar, tab bar, menus). */
+@utility matte {
+  background: var(--matte-fill);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--matte-edge);
+  box-shadow: var(--matte-shadow);
 }
-/* The brighter lens that slides under the active item. */
-@utility glass-lens {
-  background: var(--glass-lens);
-  box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 0 0 1px var(--glass-edge);
+/* The active item's lens: a flat, slightly lighter fill. */
+@utility matte-lens {
+  background: var(--matte-lens);
 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass { background: var(--bg-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .matte { background: var(--bg-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 /* Theme switch: the new theme grows as a circle from the switch (components/theme-toggle.tsx). */

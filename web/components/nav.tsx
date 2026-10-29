@@ -64,7 +64,7 @@ export function Avatar({ login, size = 32 }: { login: string; size?: number }) {
     onError={() => setFailed(true)} className="shrink-0 rounded-full bg-raised ring-1 ring-line" />;
 }
 
-/** The glass panel clips its children and sets a containing block, so tips render into body beside their anchor. */
+/** The matte panel clips its children and sets a containing block, so tips render into body beside their anchor. */
 function Tip({ label, show, children }: { label: ReactNode; show: boolean; children: (bind: object) => ReactNode }) {
   const [at, setAt] = useState<{ x: number; y: number } | null>(null);
   const open = (e: { currentTarget: Element }) => {
@@ -80,7 +80,7 @@ function Tip({ label, show, children }: { label: ReactNode; show: boolean; child
           {show && at && (
             <motion.span role="tooltip" initial={{ opacity: 0, x: -4, scale: 0.96 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: -4 }}
               transition={FADE} style={{ left: at.x, top: at.y }}
-              className="glass t-small pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-lg px-2.5 py-1 text-fg">
+              className="matte t-small pointer-events-none fixed z-50 -translate-y-1/2 whitespace-nowrap rounded-lg px-2.5 py-1 text-fg">
               {label}
             </motion.span>
           )}
@@ -102,7 +102,7 @@ function Kbd({ children }: { children: ReactNode }) {
 }
 
 /**
- * One glass lens shared by a group of nav links. It moves the moment a link is pressed (the server render follows),
+ * One matte lens shared by a group of nav links. It moves the moment a link is pressed (the server render follows),
  * and, as on iOS, pressing and holding lifts it so it can be dragged across the items; letting go opens the one under it.
  */
 function useLensNav(axis: "x" | "y") {
@@ -224,13 +224,13 @@ function useLensNav(axis: "x" | "y") {
 function Lens({ axis, pos, size, scale, held, className }: { axis: "x" | "y"; pos: MotionValue<number>; size: MotionValue<number>; scale: MotionValue<number>; held: boolean; className: string }) {
   return (
     <motion.span aria-hidden style={axis === "x" ? { x: pos, width: size, scale } : { y: pos, height: size, scale }}
-      className={cx("glass-lens pointer-events-none absolute transition-[background-color,box-shadow] duration-200", className,
+      className={cx("matte-lens pointer-events-none absolute transition-[background-color,box-shadow] duration-200", className,
         held && "bg-fg/10 shadow-[0_10px_28px_-10px_rgb(0_0_0/0.55)]")} />
   );
 }
 
 /**
- * Desktop: a floating glass panel. Its edge is the resize handle: drag it and the labels fade with the width, letting go
+ * Desktop: a floating matte panel. Its edge is the resize handle: drag it and the labels fade with the width, letting go
  * snaps open or shut; a click on the edge (or Ctrl/⌘ B) toggles it. The width is kept in a cookie so it loads right.
  */
 export function Sidebar({ login, brand, collapsed: initial }: { login: string; brand: string; collapsed: boolean }) {
@@ -291,7 +291,7 @@ export function Sidebar({ login, brand, collapsed: initial }: { login: string; b
 
   return (
     <div className="group/side sticky top-0 z-20 hidden h-dvh shrink-0 p-3 md:block">
-      <motion.aside style={{ width }} className="glass flex h-full flex-col overflow-hidden rounded-[22px] p-3">
+      <motion.aside style={{ width }} className="matte flex h-full flex-col overflow-hidden rounded-[22px] p-3">
         <Link href="/control" aria-label="Autopilot, Control" className="flex h-11 items-center gap-2.5 rounded-xl pl-[10px]">
           <LogoMark size={24} className="shrink-0" />
           <span className="flex flex-col leading-tight">
@@ -374,7 +374,7 @@ export function Sidebar({ login, brand, collapsed: initial }: { login: string; b
   );
 }
 
-/** Phones: the photo opens a small glass sheet with the theme and sign out. */
+/** Phones: the photo opens a small matte sheet with the theme and sign out. */
 function AccountMenu({ login }: { login: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -396,7 +396,7 @@ function AccountMenu({ login }: { login: string }) {
         {open && (
           <motion.div initial={{ opacity: 0, scale: 0.9, y: -6, filter: "blur(6px)" }} animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.95, y: -4, filter: "blur(4px)" }} transition={{ type: "spring", bounce: 0.25, duration: 0.35 }}
-            style={{ transformOrigin: "top right" }} className="glass absolute top-11 right-0 flex w-60 flex-col gap-3 rounded-2xl p-3">
+            style={{ transformOrigin: "top right" }} className="matte absolute top-11 right-0 flex w-60 flex-col gap-3 rounded-2xl p-3">
             <div className="flex items-center gap-3">
               <Avatar login={login} size={36} />
               <span className="flex min-w-0 flex-col">
@@ -419,7 +419,24 @@ function AccountMenu({ login }: { login: string }) {
   );
 }
 
-/** Phones: a header that turns to glass once content scrolls under it, and swaps the wordmark for the page title. */
+// Progressive blur: stacked backdrop blurs, each masked to a shorter band from the top, so the blur is strongest at the
+// screen edge and fades to nothing below the header. Opacity on an ancestor would cut the backdrop off, so it stays on.
+const BLUR_LAYERS: [number, number, number][] = [[1, 55, 100], [2, 40, 85], [4, 25, 70], [8, 10, 55], [16, 0, 40]];
+
+function ProgressiveBlur() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+2rem)]">
+      {BLUR_LAYERS.map(([px, from, to]) => {
+        const mask = `linear-gradient(to bottom, black ${from}%, transparent ${to}%)`;
+        return <div key={px} className="absolute inset-0" style={{ backdropFilter: `blur(${px}px)`, WebkitBackdropFilter: `blur(${px}px)`, maskImage: mask, WebkitMaskImage: mask }} />;
+      })}
+      <div className="absolute inset-0 bg-linear-to-b from-canvas/85 via-canvas/40 to-transparent" />
+    </div>
+  );
+}
+
+/** Phones: no box around the header; content scrolling under it melts into a progressive blur. Once scrolled, the
+ * wordmark gives way to the page title. */
 export function MobileHeader({ login }: { login: string }) {
   const path = usePathname();
   const { scrollY } = useScroll();
@@ -427,9 +444,9 @@ export function MobileHeader({ login }: { login: string }) {
   useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 36));
   const title = ITEMS.find((i) => isActive(path, i.href))?.label ?? "autopilot";
   return (
-    <header className="sticky top-0 z-20 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] md:hidden">
-      <div className={cx("flex h-12 items-center gap-2.5 rounded-2xl border pr-1.5 pl-3 transition-[background-color,border-color,box-shadow] duration-300",
-        scrolled ? "glass" : "border-transparent")}>
+    <header className="sticky top-0 z-20 md:hidden">
+      <ProgressiveBlur />
+      <div className="relative flex h-14 items-center gap-2.5 pt-[env(safe-area-inset-top)] pr-2 pl-4">
         <Link href="/control" aria-label="Autopilot, Control"><LogoMark size={22} /></Link>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span key={scrolled ? title : "brand"} initial={{ opacity: 0, y: 8, filter: "blur(4px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -444,7 +461,7 @@ export function MobileHeader({ login }: { login: string }) {
   );
 }
 
-/** Phones: a floating glass bar. A tap moves the lens at once; press and hold lifts it to drag between tabs; scrolling
+/** Phones: a floating matte bar. A tap moves the lens at once; press and hold lifts it to drag between tabs; scrolling
  * down shrinks the bar to icons and scrolling up restores it. */
 export function TabBar() {
   const badges = useBadges();
@@ -461,7 +478,7 @@ export function TabBar() {
   return (
     <nav aria-label="Main" className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
       <div ref={lens.box} {...lens.handlers}
-        className="glass pointer-events-auto relative flex w-full max-w-sm touch-none select-none rounded-[28px] p-1.5 [-webkit-touch-callout:none]">
+        className="matte pointer-events-auto relative flex w-full max-w-sm touch-none select-none rounded-[28px] p-1.5 [-webkit-touch-callout:none]">
         <Lens axis="x" {...lens} className="top-1.5 bottom-1.5 left-0 rounded-[22px]" />
         {ITEMS.map(({ href, label, icon: IconC }, i) => {
           const on = i === lens.active;
