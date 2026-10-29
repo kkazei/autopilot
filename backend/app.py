@@ -82,7 +82,7 @@ def hosted_controller(store_factory: StoreFactory = PostgresStore.from_env) -> C
 class RunRequest(BaseModel):
     """Only these kinds exist, and approval cannot be switched off from here: the argv is built by the controller."""
 
-    kind: Literal["next", "topic", "plan"]
+    kind: Literal["next", "topic", "plan", "measure"]
     dry_run: bool = False
     topic: str | None = Field(default=None, max_length=200)
     angle: str | None = Field(default=None, max_length=300)
@@ -155,6 +155,8 @@ def create_app(controller: Controller | None = None, secret: str | None = None) 
             return Message(message=ctl.start_topic(req.topic, req.angle, req.goal, dry_run=req.dry_run))
         if req.kind == "plan":
             return Message(message=ctl.plan_now())
+        if req.kind == "measure":
+            return Message(message=ctl.measure_now())
         return Message(message=ctl.start(dry_run=req.dry_run))
 
     @app.post("/approvals/{approval_id}", dependencies=auth)

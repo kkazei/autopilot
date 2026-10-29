@@ -66,15 +66,15 @@ def test_run_kinds_map_to_controller_arguments_and_approval_cannot_be_turned_off
     ctl = Controller(runner=lambda a, i, s: seen.append(a) or 0, post_runner=lambda a, i, s: seen.append(a) or 0)
     client = client_for(ctl)
     for body in ({"kind": "next", "dry_run": True}, {"kind": "plan"},
-                 {"kind": "topic", "topic": "Bread", "goal": "click"}):
+                 {"kind": "topic", "topic": "Bread", "goal": "click"}, {"kind": "measure", "dry_run": True}):
         assert client.post("/runs", json=body, headers=HEADERS).status_code == 202
         wait_status(client, finished)
-    assert seen == [["--dry-run"], ["--plan-only"], ["--topic", "Bread", "--goal", "click"]]
+    assert seen == [["--dry-run"], ["--plan-only"], ["--topic", "Bread", "--goal", "click"], ["--measure-only"]]
     assert not any("--no-approve" in a for a in seen)
     bad = client.post("/runs", json={"kind": "next", "approve": False, "argv": ["--no-approve"]}, headers=HEADERS)
     assert bad.status_code == 202 and seen[-1] == []  # unknown fields are ignored, never passed through
     assert client.post("/runs", json={"kind": "topic", "topic": "  "}, headers=HEADERS).status_code == 422
-    assert client.post("/runs", json={"kind": "measure"}, headers=HEADERS).status_code == 422
+    assert client.post("/runs", json={"kind": "publish"}, headers=HEADERS).status_code == 422
 
 
 def test_a_second_run_and_a_stale_approval_are_refused():

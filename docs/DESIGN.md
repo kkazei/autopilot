@@ -100,6 +100,23 @@ reduce-motion setting (`MotionConfig reducedMotion="user"`). Ease-out `cubic-bez
 
 KokonutUI components live in `web/components/kokonutui/` (MIT, attribution kept in each file).
 
+## Navigation glass (added 2026-10-29)
+
+The navigation floats over content as liquid glass: a translucent fill with a 22px backdrop blur, a light top edge and a
+darker bottom edge (`glass` utility, tokens `--glass-*`). Glass is only for navigation that sits above scrolling content;
+cards stay solid. With "reduce transparency" on, glass falls back to `bg/surface`.
+
+- **Desktop sidebar**: a floating glass panel, 236px, collapsible to 68px icons with the panel button or Ctrl/⌘ B; the
+  width is kept in a `nav` cookie so it renders right on load. Collapsed items show glass tooltips.
+- **Active item**: a brighter glass lens that springs to the page you open (one shared element). This is the nav's one
+  motion; icons only compress on press.
+- **Live badges**: an amber pulse on Control while a draft needs you, a steady blue light on Traces while a run is going.
+- **Phone header**: transparent at the top; once content scrolls under it, it turns to glass and the wordmark swaps for the
+  page title.
+- **Phone tab bar**: a floating glass bar with the same lens. Scrolling down shrinks it to icons (44px targets); scrolling
+  up restores the labels.
+- On phones the Control actions stack: Run next post full width, Plan next week and Dry run beneath.
+
 ## Time
 
 Every instant is shown in the viewer's timezone (24-hour), read from the browser and remembered in a `tz` cookie so

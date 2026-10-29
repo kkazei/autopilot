@@ -119,6 +119,10 @@ class Controller:
         """Next week's plan, ahead of time. The harness refuses while any post is waiting, at no model cost."""
         return self._launch(self._runner, ["--plan-only"], False, "plan now") or "Planning started."
 
+    def measure_now(self) -> str:
+        """Reads engagement now instead of waiting for the daily schedule: the same --measure-only run, no drafts."""
+        return self._launch(self._runner, ["--measure-only"], False, "measure") or "Measuring started."
+
     def _launch(self, runner: Runner, argv: list[str], dry_run: bool, what: str) -> str | None:
         """Starts the run, or says why not. One run at a time, whatever kind."""
         with self._mutex:

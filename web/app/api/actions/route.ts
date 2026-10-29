@@ -7,7 +7,7 @@ export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
 type Action =
-  | { action: "run"; kind: "next" | "topic" | "plan"; dry_run?: boolean; topic?: string; angle?: string; goal?: string }
+  | { action: "run"; kind: "next" | "topic" | "plan" | "measure"; dry_run?: boolean; topic?: string; angle?: string; goal?: string }
   | { action: "answer"; approval_id: number; choice: "approve" | "not_now" | "reject" }
   | { action: "requeue"; post_id: string };
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   }
   let path: string;
   let body: unknown = {};
-  if (a.action === "run" && ["next", "topic", "plan"].includes(a.kind)) {
+  if (a.action === "run" && ["next", "topic", "plan", "measure"].includes(a.kind)) {
     path = "/runs";
     body = { kind: a.kind, dry_run: Boolean(a.dry_run), topic: a.topic, angle: a.angle, goal: a.goal ?? "engagement" };
   } else if (a.action === "answer" && Number.isInteger(a.approval_id) && ["approve", "not_now", "reject"].includes(a.choice)) {

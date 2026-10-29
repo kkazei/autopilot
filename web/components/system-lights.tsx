@@ -6,12 +6,13 @@ import { fmtHourMinute, zoneLabel } from "@/lib/time";
 import { Dot } from "./ui";
 import type { Tone } from "@/lib/parse";
 
-export function SystemLights({ compact }: { compact?: boolean }) {
+export function SystemLights({ compact, dot }: { compact?: boolean; dot?: boolean }) {
   const { live, dbOk, waking } = useLive();
   const tz = useTimeZone();
   // The cron runs daily at 06:17 UTC (.github/workflows/run.yml); shown on the viewer's clock.
   const cron = fmtHourMinute(`${new Date().toISOString().slice(0, 10)}T06:17:00Z`, tz);
   const backend: [Tone, string] = !live ? ["neutral", "checking"] : live.backend === "up" ? ["ok", "render"] : waking ? ["warn", "waking…"] : ["error", "asleep"];
+  if (dot) return <span title={`backend ${backend[1]} · database ${dbOk ? "neon" : "error"}`} className="inline-flex"><Dot tone={dbOk ? backend[0] : "error"} className="size-2" /></span>;
   if (compact) {
     return (
       <span className="t-mono-sm inline-flex items-center gap-1.5 text-fg-2">
