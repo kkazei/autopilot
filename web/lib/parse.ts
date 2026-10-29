@@ -19,7 +19,7 @@ export type Tone = "ok" | "warn" | "error" | "info" | "neutral";
 
 export const SCORE_KEYS = ["voice", "clarity", "cta", "policy_risk"] as const;
 export const PASS_SCORE = 4; // harness default --min-score
-export const DAILY_REQUEST_LIMIT = 45; // harness/quota.py
+export const DAILY_REQUEST_LIMIT = 50; // harness/quota.py
 export const MAX_POST_CHARS = 300; // harness/schemas.py
 
 const PROMPT_RE = /--- draft \((\d+) chars\) ---\n([\s\S]*?)\n--- end ---/;

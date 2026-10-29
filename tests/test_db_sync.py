@@ -57,8 +57,8 @@ def test_pulled_traces_feed_the_quota_count(tmp_path):
     assert (used, unreadable) == (1, 0)
 
 
-def test_quota_limit_is_the_hard_cap_of_45():
-    assert quota.DAILY_REQUEST_LIMIT == 45
+def test_quota_limit_is_the_hard_cap_of_50():
+    assert quota.DAILY_REQUEST_LIMIT == 50
 
 
 def test_push_appends_only_new_log_records_and_changed_docs(tmp_path):
