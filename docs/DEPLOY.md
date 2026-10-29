@@ -1,100 +1,76 @@
-# Deploying Autopilot on GitHub Actions
+# Deploying Autopilot
 
-Two workflows live in `.github/workflows/`:
+Everything runs on free tiers. Four pieces, each deployed from `master`:
 
-| Workflow | Runs when | Does |
-|---|---|---|
-| `ci.yml` | every push and pull request | installs `requirements.txt` on Python 3.11 and runs `pytest -q` (offline, no secrets) |
-| `run.yml` | daily at 06:17 UTC, or by hand | `python -m scripts.run_outer --measure-only`, then commits anything new under `data/` |
+| Piece | Where | Deploys | Does |
+|---|---|---|---|
+| Web app (`web/`) | Vercel Hobby | on every push to `master` | the public page and the owner's control panel; reads Neon, sends actions to the backend |
+| Backend (`backend/`) | Render free web service, Docker (`render.yaml`) | on pushes to `master` that touch the Python code | runs the harness for the web app, one run at a time |
+| Database | Neon free Postgres (us-east-1) | n/a | the source of truth: plans, posts, learnings, traces |
+| Daily job and CI (`.github/workflows/`) | GitHub Actions | from `master` | `run.yml` measures every day; `ci.yml` runs the tests |
 
-## What the schedule does, and does not do
+First-time setup, with every environment variable and where its value comes from, is in `docs/WEB_APP_PLAN.md`
+(Phase 0, Phase 2 and Phase 4). This page is about how the pieces behave once set up.
 
-The scheduled run **only measures**: it reads likes, reposts and replies on posts at least 2 hours old, saves a learning for each, and
-stops. It writes no drafts and publishes nothing. Publishing needs a human to answer `Publish this post? [y/N]`, a runner has no
-keyboard, and approval stays mandatory (HANDOFF decision 4.7). **Live posts are made on your own machine.**
+## Secrets
 
-A manual run with `dry_run = true` does the whole loop (plan if nothing is waiting, write, critique, guardrails) and publishes to a
-`dryrun://` URI. It spends model requests (about 3 to 4 from the free quota) and saves no plan state and no learning.
+Secrets live only in `.env` (git-ignored), and in each platform's own settings. Never in the repository, never in a log.
 
-## One-time setup
+| Name | `.env` | Render | Vercel | GitHub Actions |
+|---|---|---|---|---|
+| `OPENROUTER_API_KEY`, `OPENROUTER_MODELS` | yes | yes | | yes |
+| `BLUESKY_HANDLE`, `BLUESKY_APP_PASSWORD` | yes | yes | | yes |
+| `DATABASE_URL` (Neon, direct) | yes | yes | yes | yes |
+| `AUTOPILOT_BACKEND_SECRET` | yes | yes | yes | |
+| `AUTOPILOT_BACKEND_URL` | | | yes | |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_ALLOWED_LOGIN` | | | yes | |
+| `AUTH_PASSWORD_HASH` (optional; mark it Sensitive) | | | yes | |
 
-1. **Merge to `master`.** GitHub runs scheduled workflows, and shows the "Run workflow" button, only for workflow files on the default
-   branch. Until `.github/workflows/` is on `master`, nothing here runs. (`ci.yml` runs on any branch with no merge.)
-2. **Add the four repository secrets**: repository, Settings, Secrets and variables, Actions, New repository secret.
+To copy a value from `.env` into a GitHub secret without printing it:
+`grep '^DATABASE_URL=' .env | cut -d= -f2- | gh secret set DATABASE_URL`. The daily job's first step prints only the
+*name* of a missing secret and fails if any is empty.
 
-   | Name | Value |
-   |---|---|
-   | `OPENROUTER_API_KEY` | your OpenRouter key (the value in `.env`) |
-   | `OPENROUTER_MODELS` | the comma-separated `:free` model ids (the value in `.env`) |
-   | `BLUESKY_HANDLE` | the account handle |
-   | `BLUESKY_APP_PASSWORD` | the app password, not the account password |
+Changing the model list means updating `OPENROUTER_MODELS` in three places: `.env`, Render, and the GitHub secret.
 
-   With the GitHub CLI, you can copy each value from `.env` without printing it:
-   `grep '^OPENROUTER_API_KEY=' .env | cut -d= -f2- | gh secret set OPENROUTER_API_KEY`
-   (repeat with the other three names). Secrets are masked in logs, and the workflow never echoes them: its check step prints only
-   the *name* of a missing secret, and the job fails if any of the four is empty.
-3. **Make sure CI can see your posts.** `approved.jsonl` and the plan state are read from the repository, so push them after every
-   local post: `git add data/ && git commit -m "data: ..." && git push`. A post that was never pushed is invisible to the runner.
+## The daily job (`run.yml`)
 
-## First manual run
+Runs `python -m scripts.db_run --measure-only` every day at 06:17 UTC (GitHub starts scheduled jobs hours late; it has
+run between 10:58 and 13:00 UTC). It pulls the state from Neon, reads likes, reposts and replies on posts at least
+2 hours old, saves a learning for each, pushes back, and stops. It writes no drafts and publishes nothing, and it commits
+nothing to the repository.
 
-1. Actions tab, "Autopilot run", Run workflow, choose `master`, leave `dry_run` unchecked, Run.
-2. Expect: steps go green; the log shows `model requests: N in the last 24 hours` and either `measure: saved learnings for ...` or
-   `measure: <id>: not yet measurable`; if anything new was written, a commit `data: scheduled run <run id>` appears.
-3. Then try `dry_run` checked once, to see the full loop run without publishing.
+- **Measure now** in the web app (Control and Learnings) runs the same measure-only run through the backend, on demand.
+- A manual run with `dry_run = true` does the whole loop and publishes to a `dryrun://` address: Actions, "Autopilot run",
+  Run workflow. CLI: `gh workflow run run.yml --ref master -f dry_run=true`.
+- The job and the backend take the same Postgres advisory lock, so they never overlap: a job that starts while a hosted
+  run is going exits with code 6 and does nothing.
+- A run that finds nothing to measure is a green run, not a failure.
+- To stop the schedule: Actions, "Autopilot run", the `...` menu, Disable workflow.
 
-Equivalent CLI: `gh workflow run run.yml --ref master -f dry_run=false`.
+## The backend (Render)
 
-## Day to day
+- Free services sleep after 15 idle minutes. The web app pings `/health` (no secret) to wake it and disables its run
+  buttons until it answers, about a minute. While a run or an approval is open, the app's status polling keeps it awake.
+- Every route except `/health` needs the `X-Autopilot-Secret` header. The run kinds are fixed in `backend/app.py`
+  (`next`, `topic`, `plan`, `measure`); approval cannot be switched off from outside.
+- A pending approval that gets no answer within 15 minutes, or a backend restart, counts as "not now": the post is
+  carried forward and the lock is released.
 
-- Before posting locally, `git pull` first, so you have the learnings the runner saved.
-- A scheduled run can find nothing to do. That is a green run, not a failure.
-- To stop the schedule: Actions tab, "Autopilot run", the `...` menu, Disable workflow.
-- If a run fails after `git commit`, the push step fails loudly (a rebase conflict, for example). Nothing is overwritten; fix it locally.
+## The web app (Vercel)
 
-## Deploying the dashboard by hand
+- Root directory `web`; Vercel detects Next.js. Every push to `master` deploys; pull requests get preview deploys.
+- An environment variable change takes effect only on the next deploy: Deployments, the latest one, Redeploy.
+- The public page `/` is static. Everything else needs the owner's sign-in.
 
-The dashboard in `dashboard/` is a static site. It is deployed by hand: no workflow builds or publishes it.
+## CI (`ci.yml`)
 
-It is live at https://autopilot.jirroaeron.workers.dev/. A Cloudflare Worker (Workers Builds, static assets only) is connected to the GitHub
-repository and rebuilds it on every push to `master`: merged pull requests and the scheduled run's data commits alike
-($0). The build settings:
+On every push and pull request: the Python suite on 3.11 (offline; no secrets, sockets blocked), then the web app's
+tests, type check and production build (no secrets or database needed).
 
-| Setting | Value |
-|---|---|
-| Production branch | `master` |
-| Root directory | empty (the repo root; the build must see `scripts/` and `harness/`) |
-| Build command | `pip install "pydantic>=2,<3" && python -m scripts.export_dashboard_data` |
-| Deploy command | `npx wrangler deploy --assets=./dashboard --name autopilot --compatibility-date=2026-10-01` |
-| Build variable | `PYTHON_VERSION` = `3.11` |
+## Retired
 
-A root directory of `dashboard` makes the build fail with `No module named 'scripts'` (seen on Oct 25). Builds of
-other branches run the version (preview) command, `npx wrangler versions upload ...`, which uploads a version but does
-not serve it; the preview `workers.dev` address is switched off on purpose, so only `master` is ever public.
-
-The export needs only pydantic beyond the standard library, so the build skips the rest of `requirements.txt`. It reads
-only files git tracks, never `.env`, and needs no secrets. If its final scan finds a secret or a raw identifier it
-refuses to write the data, so the build fails and the last good version stays up.
-
-**Trade-off:** step 4 below (reading the Trace tab before it goes public) no longer happens before each deploy. The
-scan is the only check, and it is pattern-based. Data reaches `master` only through reviewed pull requests or the
-measure-only scheduled run.
-
-The first deploy (Oct 25) was a manual upload to https://restless-morning-449e.jirroaeron.workers.dev/; that copy does
-not update. The manual steps below still work for a one-off upload.
-
-1. `git pull`, then re-export from the repo's tracked data: `python -m scripts.export_dashboard_data`.
-2. Publish the `dashboard/` folder as a static site with **no build command** (the folder is the site; the output directory is the folder itself).
-3. `dashboard/data.json` and `dashboard/data.js` must be in the folder you upload. They are untracked on purpose (listed in `.git/info/exclude`), so a deploy straight from a git checkout will not have them until step 1 is run on that machine.
-4. Review the Trace tab before uploading. It shows model output and tool results from the traces, which are redacted for secrets and raw post identifiers, but redaction is pattern-based: read it as you would before making the repo public.
-
-## Assumptions and deviations from the build plan
-
-- **06:17 UTC** is an assumption: off the hour, when scheduled jobs queue, and later than 2 hours after a post made the evening before.
-- The plan's `python -m loops.outer` does not exist here; the entry point is `python -m scripts.run_outer`.
-- **Hermes is not installed on the runner.** The workflow runs with `AUTOPILOT_WRITER_RUNTIME` unset, which means `direct`: OpenRouter is called straight from the harness. Running the writer through Hermes (`AUTOPILOT_WRITER_RUNTIME=hermes`) is a local option; it needs the `hermes` CLI on the PATH, and the scheduled run only measures, so it has no writer to switch.
-- The schedule does not publish, which is the choice made on Oct 23 for the cron-versus-approval conflict. A posting cron would need
-  a deliberate change to decision 4.7, or a pre-approved drafts queue that does not exist yet.
-- Pushes made with the built-in `GITHUB_TOKEN` do not trigger other workflows, so the data commit does not start a CI run.
-- The free-tier guard (`harness/quota.py`) counts `llm_call` events in `data/runs/`. The runner's traces are committed back, so the
-  count stays correct across local and CI runs, as long as local traces are pushed too.
+- **The static dashboard** (`dashboard/`, https://autopilot.jirroaeron.workers.dev/, Cloudflare Workers Builds) is built
+  from the `data/` files in git. Those stopped updating when Neon became the source of truth on Oct 28, so it shows the
+  state up to then. The web app replaces it.
+- **The local Gradio app** and its Save-to-GitHub data PRs: same reason. Don't post from it; the hosted rate cap cannot
+  see its posts.

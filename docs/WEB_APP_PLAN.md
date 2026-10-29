@@ -2,6 +2,12 @@
 
 A private web app that replaces the local Gradio app, at $0. Decided 2026-10-28; target is two days of build.
 
+**Status (2026-10-29): live.** Phases 0 to 4 are done: https://autopilot-kkazei.vercel.app (public page at `/`, the owner's
+panel behind sign-in), the backend on Render, Neon as the source of truth, and the daily job on `db_run`. Built on top of
+v1: local time zones, motion, a run timeline, topic posts, password sign-in, a public landing page, Learnings grouped by
+post, Measure now, liquid-glass navigation and a theme switch (PRs #36 to #44). Phase 5 (retiring Gradio) is open: the
+local app is no longer used for posting.
+
 ## Decisions
 
 | Question | Decision |
@@ -39,10 +45,10 @@ guardrail before it posts (architecture rules 1 and 2).
 | 1 | 2. Backend | FastAPI on Render (run, status, approve, health), shared-secret auth, Dockerfile, render.yaml; cron moves to `db_run`. |
 | 2 | 3. Design | One direction, tokens, no exploration rounds. |
 | 2 | 4. Web v1 | Login, plan and posts, learnings, approval queue, start and watch runs, trace viewer, quota meter. |
-| later | 5. Cutover | Gradio and the web side by side for a few days, then retire Gradio and the data PR cycle. |
+| later | 5. Cutover | Gradio and the web side by side for a few days, then retire Gradio and the data PR cycle. Open: Gradio is unused; removing its code is the last step. |
 
-Until cutover, a local Gradio post is not in the database, so the hosted rate cap cannot see it: post from one place at a time,
-and run `python -m scripts.db_import` after a local post (it only appends what the database lacks).
+A local Gradio post is not in the database, so the hosted rate cap cannot see it: post only from the web app. (Should one
+ever happen, `python -m scripts.db_import` appends what the database lacks.)
 
 ## Phase 0: the owner's checklist (about 20 minutes)
 
@@ -65,7 +71,7 @@ Never paste a secret into chat or a commit. Put each in `.env` locally and in th
 
 The backend is `backend/app.py`, a FastAPI wrapper around the local app's Controller. Every run is wrapped in
 `db_sync.hosted_data_dir`. Routes: `GET /health` (open), and with the `X-Autopilot-Secret` header `GET /status`,
-`POST /runs` (`next`, `topic`, `plan`), `POST /approvals/{id}` and `POST /posts/{id}/requeue`.
+`POST /runs` (`next`, `topic`, `plan`, `measure`), `POST /approvals/{id}` and `POST /posts/{id}/requeue`.
 
 1. **A backend secret.** Generate one and keep it in `.env` as `AUTOPILOT_BACKEND_SECRET` (Vercel gets it in Phase 4):
    `.venv\Scripts\python -c "import secrets; print(secrets.token_hex(32))"`
