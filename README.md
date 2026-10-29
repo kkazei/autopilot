@@ -99,16 +99,17 @@ Models are listed in `OPENROUTER_MODELS`; on a 429 or a timeout the client backs
 - The hosted path end to end: a dry run started from the web app on Render, pulled from Neon, ran plan, write, critique and every guardrail, waited for approval in the browser, and pushed its trace back (`run_20261028_140054_e50c59`).
 - A Bluesky timeout after sending: the pending row blocked a retry, the account's server showed no post, and the row was settled by hand without editing history (`run_20261025_103042_bfa092`).
 - On real models, from real traces: JSON/length repair (it succeeded several times and failed cleanly twice), 429 backoff and fallback down the chain, and guardrails before every publish. The rate cap blocked a run before any model call on the real harness (`data/evidence/stage_d`).
-- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering, the database lock and sync) in automated tests: 572 Python tests that run offline (2 more need a separate test database) and 23 web tests.
+- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering, the database lock and sync) in automated tests: 572 Python tests that run offline (2 more need a separate test database) and 25 web tests.
 
 **Partial or not proven yet**
-- **The critic is the weak link.** Calibration on 10 hand-scored drafts: it agreed on 6 of 10 and was too lenient on d03, d06, d08 and d10. One rubric change raised that to 7 of 10, which is one draft and within run-to-run noise, measured on the same 10 drafts. It is still lenient on d03, d06 and d10. On real drafts it scored an invented class time, invented crust details, a claim about customers and urgency pressure 5 out of 5, and it noticed invented scarcity ("a few spots remain") but still passed it at 4. Human approval caught each one, which is why approval stays mandatory.
+- **The critic is the weak link, and changed model on Oct 29.** poolside's `laguna` (free until Oct 31) agreed with the hand scores on 7 of 10 drafts and was too lenient on 3 (d03, d06, d10). On real drafts it scored an invented class time, invented crust details, a claim about customers and urgency pressure 5 out of 5, and passed invented scarcity at 4. Human approval caught each one, which is why approval stays mandatory.
+  Its replacement, `cohere/north-mini-code`, agrees on **8 of 10 and passes none that the human would fail**; it is too strict on 2 (d01, d04), which costs a revision rather than a bad post (`data/calibration/report.north-mini-code.md`, 10 requests, current critic prompt). That is still 10 drafts, one run, and hand scores partly adjusted with the critic's own rubric. Of the other free models probed on d03, every one that answered (two nemotrons, xing4.0) passed it with all 5s, so when north is busy, the fallback critic is lenient again. It is unproven on real drafts as the writer and planner.
 - **No organic engagement.** Every learning with signal comes from likes and reposts by people the builder knows, and the one plan that cited a learning used it shallowly. The analyst's wording can also go further than three likes support: one learning says a post "resonated modestly with a niche audience".
 - **The free writer often overshoots the 300-character limit.** On Oct 25, 4 of 8 one-shot repairs failed. The repair now aims at 240 (PR #17); that is unproven on a real model.
-- **The planner's angle was a source of invented claims** (stage B). The prompts now treat the angle as a focus, not as a fact (PR #15). That is tested offline only. The calibration numbers above were measured on the critic prompt before that change.
+- **The planner's angle was a source of invented claims** (stage B). The prompts now treat the angle as a focus, not as a fact (PR #15). That is tested offline only. laguna's calibration was measured before that change; north-mini-code's after it.
 - **Failure forcing on a real model is partial** (`data/evidence/stage_d/README.md`). Prompt injection was resisted, but the run stopped at a length repair before the critic. The banned phrase was not forced: the writer avoided it, and approval caught the urgency instead. The revision cap was not forced: the free critic is too lenient to fail three times on demand.
 - **Render's free tier sleeps** after 15 idle minutes; the first action after that waits about a minute while it wakes (the app says so and disables the run buttons until it answers).
-- **The 50-requests-a-day free limit is assumed**, not confirmed for this account. The free model pool is unstable, and poolside's `laguna` id expires on Oct 31.
+- **The 50-requests-a-day free limit is assumed**, not confirmed for this account. The free model pool is unstable: on Oct 29, 8 candidates were probed and 3 were unusable (a 403 for non-agent apps, a reasoning model that ran out of tokens, a 429 pool). The chain is now north-mini-code, nemotron-3.5-super-vl, nemotron-3-ultra, gemma-4-31b, flint.
 
 ## What it is autonomous at, and what is next
 
@@ -117,7 +118,8 @@ daily job measures and learns with nobody at the keyboard. **It does not publish
 post, from the web app, because the critic missed an invented class time and urgency pressure on real drafts.
 
 Next steps, in order:
-1. **Replace poolside's `laguna` model id** before it expires on Oct 31, and recalibrate the critic on fresh drafts.
+1. **Watch the new chain on real drafts**: north-mini-code as writer and planner, and how often its strictness costs a
+   revision. Recalibrate on fresh drafts, not only the same 10.
 2. **A code check for times, prices and numbers that are not in the brief.** It would have caught the invented class
    time without relying on the critic.
 3. **Check the account's server automatically after a publish timeout**, instead of leaving "outcome unknown" for a human to settle by hand.
