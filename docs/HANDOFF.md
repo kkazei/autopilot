@@ -1,5 +1,11 @@
 # Autopilot handoff (2026-10-26, about 10:15 UTC): the build is finished; read "Oct 26 update" first, then "Final state", in section 2
 
+> **Oct 29: superseded for day-to-day use.** Autopilot is now a hosted web app (https://autopilot-kkazei.vercel.app):
+> Next.js on Vercel, the harness behind FastAPI on Render, and Neon Postgres as the source of truth (PRs #36 to #44).
+> The daily job measures through `scripts.db_run` and no longer commits `data/`; the Gradio app, the Save/Pull data PRs
+> and the static dashboard are retired. Current state: `README.md`, `docs/WEB_APP_PLAN.md`, `docs/DEPLOY.md`. The log
+> below is the build history up to Oct 26, kept as written.
+
 Status key: `[x]` done, `[~]` partly done, `[ ]` not started, `[-]` deferred by decision.
 
 ## 1. Sources of truth

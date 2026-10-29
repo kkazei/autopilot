@@ -12,6 +12,8 @@ Autopilot is an autonomous marketing agent system for a fictional small business
 
 - Channel: Bluesky via the atproto package, using an app password from environment variables.
 
+- Hosted: the web app in web/ (Next.js on Vercel) reads Neon Postgres, the source of truth, and sends actions to backend/ (FastAPI on Render), which runs the harness through harness/db_sync.py. The web app never publishes; it can only answer the harness's approval prompt.
+
 - Secrets come only from environment variables or .env (git-ignored). Never hard-code, log or print them.
 
 ## Architecture rules (do not break)
