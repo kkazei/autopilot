@@ -1,5 +1,5 @@
 # The hosted backend on Render's free web service (render.yaml points here; the build context is the repo root).
-# Only the code the backend runs is copied, by name, so data/, .env, tests and the Gradio page never enter the image:
+# Only the code the backend runs is copied, by name, so data/, .env, tests and the web app never enter the image:
 # Postgres is the source of truth, and secrets arrive as environment variables set in the Render dashboard.
 FROM python:3.11-slim
 

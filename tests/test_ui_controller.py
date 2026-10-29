@@ -6,14 +6,13 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
-from datetime import timedelta
 
 import pytest
 
 from harness import plan_state
 from harness.llm import MockLLM
 from scripts import run_outer
-from tests.helpers import GOOD_TEXT, NOW, add_published, data, scores, week_json  # noqa: F401
+from tests.helpers import GOOD_TEXT, NOW, data, scores, week_json  # noqa: F401
 from tests.test_outer_loop import bsky  # noqa: F401
 from ui import controller
 from ui.controller import Controller, Snapshot
@@ -174,15 +173,6 @@ def test_no_answer_through_the_app_carries_the_post_forward_and_posts_nothing(da
     assert "no approval input" in s.log
 
 
-def test_status_texts_read_quota_rate_cap_and_plan(data):  # noqa: F811
-    assert "0 of 45 model requests" in controller.quota_text(NOW)
-    assert controller.rate_text(NOW).startswith("A post can go out now")
-    add_published("post_a", age=timedelta(minutes=10))
-    assert "minimum gap is 60" in controller.rate_text(NOW)
-    rationale, rows, ids = controller.plan_rows()
-    assert "No plan yet" in rationale and rows == [] and ids == []
-
-
 def test_not_now_through_the_app_carries_the_post_forward_and_posts_nothing(data, bsky):  # noqa: F811
     ctl = Controller(runner=real_runner([week_json(), GOOD_TEXT, scores(5)]))
     ctl.start(dry_run=False)
@@ -190,15 +180,6 @@ def test_not_now_through_the_app_carries_the_post_forward_and_posts_nothing(data
     ctl.answer(s.approval.id, "not_now")
     s = wait_for(ctl, done)
     assert bsky == [] and plan_state.load_state().posts[0].status == "carried_forward"
-
-
-def test_the_budget_line_shows_requests_left_and_warns_when_low(data, monkeypatch):  # noqa: F811
-    line = controller.budget_line(NOW)
-    assert "0 / 45" in line and "next run may make 16" in line and "posting: OK now" in line
-    assert "Few requests left" not in line
-    monkeypatch.setattr(controller.quota, "run_cap", lambda now: (4, 41, 0))
-    line = controller.budget_line(NOW)
-    assert "41 / 45" in line and "next run may make 4" in line and "Few requests left" in line
 
 
 def recording_runner(calls: list[list[str]]) -> Callable:
@@ -249,15 +230,6 @@ def test_a_topic_dry_run_through_the_app_asks_then_publishes_a_dryrun_uri(data, 
     ctl.answer(s.approval.id, "approve")
     s = wait_for(ctl, done)
     assert s.exit_code == 0 and "published: dryrun://" in s.log and bsky == []
-
-
-def test_topic_choices_are_the_planned_topics_newest_first_without_repeats(data):  # noqa: F811
-    assert controller.topic_choices() == []
-    posts = [plan_state.PostRecord(id=f"post_{i}", plan_id="plan_x", day=day, topic=topic, angle="a", goal="click")
-             for i, (day, topic) in enumerate([("2026-10-23", "topic 3 "), ("2026-10-25", "Topic 2"),
-                                               ("2026-10-27", "Topic 3")])]
-    plan_state.save_state(plan_state.PlanState(posts=posts))  # the oldest repeats the newest in other case and spacing
-    assert controller.topic_choices() == ["Topic 3", "Topic 2"]
 
 
 def test_a_topic_left_empty_in_the_dropdown_is_refused():
