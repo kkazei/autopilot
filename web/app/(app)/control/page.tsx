@@ -4,11 +4,12 @@ import { ApprovalCard, LatestRun, MeasureButton, RunButtons, TopicForm } from "@
 import { LiveQuota } from "@/components/live-quota";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
-import { Badge, Card, Empty, PageHeader, Stat } from "@/components/ui";
+import { Badge, Card, Dot, Empty, PageHeader, Stat } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { log, planState, recentRuns, requestsLast24h, type Learning } from "@/lib/db";
-import { ago, shortRun, until } from "@/lib/format";
-import { EXIT_MEANINGS, exitTone, rateCap, type ApprovedRow, type RunSummary, type Tone } from "@/lib/parse";
+import { ago, until } from "@/lib/format";
+import { rateCap, type ApprovedRow, type Tone } from "@/lib/parse";
+import { rowStory, topicLookup } from "@/lib/runs";
 import { dateLabel } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,9 @@ export default async function Control() {
   const waiting = state.posts.filter((p) => p.status === "planned" || p.status === "carried_forward").sort((a, b) => a.day.localeCompare(b.day));
   const next = waiting[0];
   const cap = rateCap(approved, now);
+  const topic = topicLookup(state.posts);
   const lastRun = runs[0];
-  const lastSummary = lastRun?.summary ? (JSON.parse(lastRun.summary.summary_out) as RunSummary) : null;
+  const last = lastRun ? rowStory(lastRun, topic, now.getTime()) : null;
   const learning = learnings.at(-1);
   const learningTopic = learning && state.posts.find((p) => p.id === learning.post_id)?.topic;
 
@@ -44,8 +46,9 @@ export default async function Control() {
         <Stat label="next post" value={next ? dateLabel(next.day) : "—"} sub={next ? `${next.topic} · ${next.goal}` : "queue empty: plan next week"} />
         <Stat label="rate cap" value={cap.open ? "open" : "closed"}
           sub={cap.open ? <><CountUp value={cap.inWindow} />/3 in 24h · {cap.last ? `last post ${ago(cap.last.toISOString())}` : "no posts yet"}</> : `opens ${cap.opensAt ? until(cap.opensAt.toISOString(), now.getTime()) : "soon"}`} />
-        <Stat label="last run" value={lastSummary ? <>exit <CountUp value={lastSummary.exit_code} /></> : "—"}
-          sub={lastRun ? `${EXIT_MEANINGS[lastSummary?.exit_code ?? -1] ?? "running"} · ${ago(lastRun.updated_at)}` : "no runs yet"} />
+        <Stat label="last run" words href={lastRun ? `/runs/${lastRun.run_id}` : undefined}
+          value={last ? <span className="flex items-center gap-2.5"><Dot tone={last.tone} className="size-2.5" />{last.title}</span> : "—"}
+          sub={last && lastRun ? `${last.detail} · ${ago(lastRun.updated_at)}` : "no runs yet"} />
       </Reveal>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -75,13 +78,16 @@ export default async function Control() {
           <Card title="Recent traces" right={<Link href="/runs" className="hover:text-fg">all →</Link>}>
             <ul className="-mx-2 flex flex-col">
               {runs.map((r) => {
-                const s = r.summary ? (JSON.parse(r.summary.summary_out) as RunSummary) : null;
+                const story = rowStory(r, topic, now.getTime());
                 return (
                   <li key={r.run_id}>
-                    <Link href={`/runs/${r.run_id}`} className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-raised">
-                      <span className="t-mono-sm text-fg-2">{shortRun(r.run_id)}</span>
-                      <span className="t-small truncate text-fg-3">{ago(r.started_at)}</span>
-                      <span className="ml-auto"><Badge tone={exitTone(s?.exit_code)}>{s ? EXIT_MEANINGS[s.exit_code] ?? `exit ${s.exit_code}` : "running"}</Badge></span>
+                    <Link href={`/runs/${r.run_id}`} className="flex items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-raised">
+                      <Dot tone={story.tone} className="mt-2" />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-sm font-medium">{story.title}</span>
+                        <span className="t-small truncate text-fg-3">{story.detail}</span>
+                      </span>
+                      <span className="t-small shrink-0 pt-0.5 text-fg-3">{ago(r.started_at)}</span>
                     </Link>
                   </li>
                 );

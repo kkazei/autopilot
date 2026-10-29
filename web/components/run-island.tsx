@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { StatusIsland, type IslandTask } from "./kokonutui/status-island";
 import { useLive } from "./live";
-import { EXIT_MEANINGS, stepLabel } from "@/lib/parse";
+import { describeEvents, stepLabel } from "@/lib/parse";
 
 /** A pill on every page while a run is going: what it is doing now, a way to its trace, and the approval when one
  * is waiting. It reports the result for a few seconds after the run ends, then leaves. */
@@ -22,9 +22,10 @@ export function RunIsland() {
   useEffect(() => {
     if (wasRunning.current && !running && status) {
       const code = status.exit_code;
+      const story = run ? describeEvents(run.events) : null;
       setFinished({
-        id: `done-${run?.run_id}`, label: code === 0 ? "Run finished" : `Run ${EXIT_MEANINGS[code ?? -1] ?? "ended"}`,
-        detail: code === null ? "crashed: see the trace" : `exit ${code}`, status: code === 0 ? "done" : "error",
+        id: `done-${run?.run_id}`, label: story?.title ?? (code === 0 ? "Run finished" : "Run ended"),
+        detail: code === null ? "crashed: see the trace" : story?.detail ?? `exit ${code}`, status: story?.tone === "error" || (code !== 0 && code !== null && !story) ? "error" : "done",
         action: run ? { label: "Trace", onClick: () => router.push(`/runs/${run.run_id}`) } : undefined,
       });
     }

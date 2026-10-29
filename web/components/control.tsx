@@ -13,7 +13,7 @@ import { EASE_OUT } from "./motion";
 import { Time } from "./time";
 import { Badge, buttonClass, Card, cx, Dot, GuardChip, Icon, ScoreTile } from "./ui";
 import { shortRun } from "@/lib/format";
-import { EXIT_MEANINGS, exitTone, MAX_POST_CHARS, parseApprovalPrompt, SCORE_KEYS, shortModel, stepLabel } from "@/lib/parse";
+import { describeEvents, MAX_POST_CHARS, parseApprovalPrompt, SCORE_KEYS, shortModel, stepLabel } from "@/lib/parse";
 
 const APPROVAL_TIMEOUT_S = 15 * 60; // ui/controller.py APPROVAL_TIMEOUT_S
 
@@ -318,21 +318,22 @@ export function LatestRun() {
   const run = live?.run;
   const status = live?.status;
   const running = Boolean(status?.running);
-  const exit = status && !running ? status.exit_code : null;
+  const story = run && !running ? describeEvents(run.events) : null;
   const steps = (run?.events ?? []).map((e, i) => [e, i] as const).slice(-6);
   return (
     <Card>
       <div className="mb-4 flex items-center gap-2">
         <AnimatePresence mode="popLayout" initial={false}>
-          <motion.span key={running ? `run-${status!.what}` : `exit-${exit}`} initial={{ opacity: 0, y: 6, filter: "blur(3px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          <motion.span key={running ? `run-${status!.what}` : `story-${run?.run_id}-${story?.title}`} initial={{ opacity: 0, y: 6, filter: "blur(3px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -6, filter: "blur(3px)" }} transition={{ duration: 0.22, ease: EASE_OUT }}>
             {running ? <Badge tone="info">running · {status!.what}</Badge>
-              : exit !== null && exit !== undefined ? <Badge tone={exitTone(exit)}>{EXIT_MEANINGS[exit] ?? `exit ${exit}`}</Badge>
+              : story ? <Badge tone={story.tone}>{story.title}</Badge>
               : <Badge tone="neutral">last run</Badge>}
           </motion.span>
         </AnimatePresence>
         {run && <span className="t-mono-sm ml-auto text-fg-3">{shortRun(run.run_id)}</span>}
       </div>
+      {story && <p className="t-small -mt-2 mb-4 text-fg-2">{story.detail}</p>}
       {!run ? <p className="t-small text-fg-3">No runs yet.</p> : (
         <>
           <RunLanes events={run.events} live={!run.finished} compact

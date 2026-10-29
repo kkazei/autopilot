@@ -22,10 +22,6 @@ export const PASS_SCORE = 4; // harness default --min-score
 export const DAILY_REQUEST_LIMIT = 45; // harness/quota.py
 export const MAX_POST_CHARS = 300; // harness/schemas.py
 
-export const EXIT_MEANINGS: Record<number, string> = {
-  0: "done", 2: "refused", 3: "escalated", 4: "failed", 5: "blocked", 6: "busy", 7: "not saved",
-};
-
 const PROMPT_RE = /--- draft \((\d+) chars\) ---\n([\s\S]*?)\n--- end ---/;
 
 /** The draft the backend is waiting on, from guardrails.require_approval's prompt. */
@@ -109,6 +105,7 @@ export type RunSummary = {
   dry_run: boolean;
   requests?: { used: number; limit: number };
   outcomes?: { post_id: string | null; status: string; reason: string; uri?: string }[];
+  learnings?: { saved?: string[]; skipped?: string[] };
 };
 
 /** The run_summary event is written untruncated as JSON (outer._log_summary). Absent while the run is going. */
@@ -132,12 +129,96 @@ export function runKind(events: TraceEvent[]): string {
   return first.summary_out.includes("dry_run=True") ? "dry run" : "post";
 }
 
-export function exitTone(code: number | null | undefined): Tone {
-  if (code === null || code === undefined) return "info";
-  if (code === 0) return "ok";
-  if (code === 3 || code === 6) return "warn";
-  if (code === 2) return "neutral";
-  return "error";
+export type RunStory = { title: string; detail: string; tone: Tone };
+
+/** What a run's trace tells about it, enough to describe it without loading every event (db.recentRuns selects these). */
+export type RunFacts = {
+  kind: string;
+  summary: RunSummary | null;
+  /** The "publish post_..." decision, when the run reached it. Topic posts (run_post) write no summary, so it stands in. */
+  publish?: TraceEvent | null;
+  last?: TraceEvent | null;
+  updatedAt?: string;
+};
+
+/** A run stuck longer than the approval timeout (15 min) plus slack has ended without a summary (a crash or a topic post). */
+const IDLE_MS = 20 * 60 * 1000;
+
+function why(reason: string): string {
+  const len = /is (\d+) characters; the limit is (\d+)/.exec(reason);
+  if (len) return `the draft stayed at ${len[1]} characters (limit ${len[2]})`;
+  if (/did not approve/.test(reason)) return "you said no";
+  if (/still waiting/.test(reason)) return "posts are still waiting in the queue";
+  if (/no headroom|rate cap/.test(reason)) return "the rate cap was closed";
+  if (/BudgetExceeded|request cap|attempt budget/.test(reason)) return "it ran out of model requests";
+  if (/RateLimit|429|rate-limited/i.test(reason)) return "the free models were rate-limited";
+  if (/Timeout|timed out/i.test(reason)) return "a model timed out";
+  const text = reason.replace(/^(blocked|refused|failed|no headroom|planning failed):\s*/i, "").replace(/^[a-z_]+:\s*/, "");
+  return text.length > 70 ? `${text.slice(0, 69)}…` : text;
+}
+
+/**
+ * The run in plain words for the dashboard: what it did and how it ended, from the harness's run summary. The exit code
+ * alone is 0 for almost every run (posted, measured and "nothing to do" alike), so it is never the headline.
+ */
+export function describeRun(f: RunFacts, topic: (postId: string) => string | undefined = () => undefined, now = Date.now()): RunStory {
+  const s = f.summary;
+  const about = (id: string | null | undefined) => (id && topic(id) ? `“${topic(id)}”` : "the post");
+  if (!s) {
+    const out = f.publish?.summary_out ?? "";
+    const id = f.publish?.summary_in.match(/post_[a-f0-9]{8}/)?.[0];
+    if (out.startsWith("published")) {
+      return out.includes("dryrun://") ? { title: "Dry run", detail: `${about(id)} passed every check; nothing posted`, tone: "info" }
+        : { title: "Posted", detail: `${about(id)} is on Bluesky`, tone: "ok" };
+    }
+    if (out.startsWith("blocked")) {
+      return /did not approve/.test(out) ? { title: "Declined", detail: `you said no to ${about(id)}`, tone: "neutral" }
+        : { title: "Blocked", detail: why(out), tone: "error" };
+    }
+    if (f.last && !f.last.ok && f.last.summary_out.startsWith("failed")) return { title: "Failed", detail: why(f.last.summary_out), tone: "error" };
+    if (f.updatedAt && now - Date.parse(f.updatedAt) < IDLE_MS) return { title: "Running", detail: f.kind, tone: "info" };
+    return { title: "Ended", detail: "no summary was written; open the trace", tone: "neutral" };
+  }
+  if (s.exit_code === 6) return { title: "Skipped", detail: "another run held the lock", tone: "warn" };
+  if (s.exit_code === 7) return { title: "Unsaved", detail: "the result could not be written back", tone: "error" };
+  const outs = s.outcomes ?? [];
+  const o = outs.find((x) => x.post_id) ?? outs[0];
+  const saved = s.learnings?.saved?.length ?? 0;
+  if (f.kind === "measure") {
+    const one = s.learnings?.saved?.[0];
+    if (saved === 1 && one && topic(one)) return { title: "Measured", detail: `new learning from “${topic(one)}”`, tone: "ok" };
+    return saved ? { title: "Measured", detail: `${saved} new learning${saved === 1 ? "" : "s"} saved`, tone: "ok" }
+      : { title: "Measured", detail: "nothing new to learn yet", tone: "neutral" };
+  }
+  const planned = outs.find((x) => x.status === "planned");
+  if (!o || (o === planned && !o.post_id)) {
+    if (planned) return { title: "Planned", detail: planned.reason.replace(/^planned/, "queued"), tone: "ok" };
+    return { title: f.kind === "plan" ? "No plan" : "Nothing", detail: o ? why(o.reason) : "nothing to do", tone: "neutral" };
+  }
+  switch (o.status) {
+    case "published":
+      return s.dry_run || o.uri?.startsWith("dryrun://") ? { title: "Dry run", detail: `${about(o.post_id)} passed every check; nothing posted`, tone: "info" }
+        : { title: "Posted", detail: `${about(o.post_id)} is on Bluesky`, tone: "ok" };
+    case "blocked":
+      return /did not approve/.test(o.reason) ? { title: "Declined", detail: `you said no to ${about(o.post_id)}`, tone: "neutral" }
+        : { title: "Blocked", detail: why(o.reason), tone: "error" };
+    case "escalated":
+      return { title: "Escalated", detail: `${about(o.post_id)} failed review 3 times; it needs you`, tone: "warn" };
+    case "carried_forward":
+      return { title: "Deferred", detail: `${why(o.reason)}; ${about(o.post_id)} waits for the next run`, tone: "neutral" };
+    case "failed":
+      return { title: "Failed", detail: why(o.reason), tone: "error" };
+    default:
+      return { title: f.kind === "plan" ? "No plan" : /no headroom/.test(o.reason) ? "Waited" : "Nothing", detail: why(o.reason), tone: "neutral" };
+  }
+}
+
+/** describeRun from a full event list (the live run, a trace page). */
+export function describeEvents(events: TraceEvent[], topic?: (postId: string) => string | undefined, now?: number): RunStory {
+  return describeRun({
+    kind: runKind(events), summary: runSummary(events), last: events.at(-1),
+    publish: events.find((e) => /^publish post_/.test(e.summary_in) && e.kind === "decision"), updatedAt: events.at(-1)?.ts,
+  }, topic, now);
 }
 
 /** "google/gemma-4-31b-it:free" -> "gemma-4-31b-it" */

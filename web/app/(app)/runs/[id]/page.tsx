@@ -7,8 +7,9 @@ import { Time } from "@/components/time";
 import { TraceLanes } from "@/components/trace-lanes";
 import { Badge, Card, cx, Dot, PageHeader, Stat } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
-import { runEvents } from "@/lib/db";
-import { durationSeconds, EXIT_MEANINGS, exitTone, runKind, runSummary, shortModel, type TraceEvent } from "@/lib/parse";
+import { planState, runEvents } from "@/lib/db";
+import { describeEvents, durationSeconds, runKind, runSummary, shortModel, type TraceEvent } from "@/lib/parse";
+import { topicLookup } from "@/lib/runs";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,11 @@ export default async function RunTrace({ params, searchParams }: { params: Promi
   await requireOwner();
   const [{ id }, q] = await Promise.all([params, searchParams]);
   if (!RUN_ID.test(id)) notFound();
-  const run = await runEvents(id);
+  const [run, state] = await Promise.all([runEvents(id), planState()]);
   if (!run) notFound();
   const events = run.events;
   const summary = runSummary(events);
+  const story = describeEvents(events, topicLookup(state.posts));
   const kind = KINDS.find(([k]) => k === q.kind)?.[1] ?? "all";
   const failedOnly = q.failed === "1";
   const rows = events.map((e, i) => [e, i] as const).filter(([e]) => (kind === "all" || e.kind === kind) && (!failedOnly || !e.ok));
@@ -44,8 +46,9 @@ export default async function RunTrace({ params, searchParams }: { params: Promi
     <>
       <PageHeader crumb={<><Link href="/runs" className="hover:text-fg">Traces</Link>  /  {id}</>}
         title={<span className="flex flex-wrap items-center gap-3"><Time iso={run.started_at} kind="stamp" /> · {runKind(events)}
-          <Badge tone={exitTone(summary?.exit_code)}>{summary ? EXIT_MEANINGS[summary.exit_code] ?? `exit ${summary.exit_code}` : "running"}</Badge>
-          {summary?.dry_run && <Badge tone="info">dry run</Badge>}</span>} />
+          <Badge tone={story.tone}>{story.title}</Badge>
+          {summary?.dry_run && story.title !== "Dry run" && <Badge tone="info">dry run</Badge>}</span>}
+        sub={<>{story.detail}{summary && <span className="text-fg-3"> · exit {summary.exit_code}</span>}</>} />
 
       <Reveal className="grid auto-rows-fr grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
         <Stat label="duration" value={dur === null ? "—" : `${dur}s`} sub={summary ? "first to last event" : "still running"} />

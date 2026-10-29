@@ -81,6 +81,10 @@ Geist and Geist Mono (`next/font` ships both).
 - When the backend is asleep (Render free tier), the system light is grey with "waking…" and the run buttons are disabled
   until `/health` answers.
 - Red appears only for failures and Reject; amber only for things waiting on the owner.
+- Runs are described by what happened, never by exit code alone (`describeRun` in `web/lib/parse.ts`): a title (Posted,
+  Dry run, Measured, Declined, Blocked, Escalated, Deferred, Planned, No plan, Failed) and one plain line naming the post
+  by its topic. Used by the last-run tile (a link to the trace), Recent traces, the Traces list, the trace header and the
+  run island. Topic posts write no run summary, so their outcome is read from the publish or inner-loop event.
 
 ## Motion (added with the KokonutUI pass)
 
