@@ -5,7 +5,7 @@ import { MeasureButton } from "@/components/control";
 import { FilterTabs } from "@/components/filter-tabs";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { Badge, Card, PageHeader, Stat } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { log, planState } from "@/lib/db";
 import { groupLearnings, type ApprovedPost, type LearningRow, type PostLearnings } from "@/lib/learnings";
@@ -33,11 +33,11 @@ export default async function Learnings({ searchParams }: { searchParams: Promis
         <MeasureButton />
       </PageHeader>
 
-      <Reveal className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Summary label="posts measured" value={groups.length} />
-        <Summary label="lessons for the planner" value={counts.lessons} />
-        <Summary label="likes · latest reads" value={totals.likes} />
-        <Summary label="reposts + replies" value={totals.reposts + totals.replies} />
+      <Reveal className="grid auto-rows-fr grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <Stat label="posts measured" value={<CountUp value={groups.length} />} />
+        <Stat label="lessons" value={<CountUp value={counts.lessons} />} />
+        <Stat label="likes" value={<CountUp value={totals.likes} />} />
+        <Stat label="reposts + replies" value={<CountUp value={totals.reposts + totals.replies} />} />
       </Reveal>
 
       <FilterTabs id="learnings" options={(Object.keys(FILTERS) as Filter[]).map((k) => ({
@@ -52,15 +52,6 @@ export default async function Learnings({ searchParams }: { searchParams: Promis
         </Reveal>
       )}
     </>
-  );
-}
-
-function Summary({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-4">
-      <span className="t-label text-fg-3">{label}</span>
-      <span className="t-metric"><CountUp value={value} /></span>
-    </div>
   );
 }
 

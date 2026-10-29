@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
-  countLlmCalls, latestCritique, latestGuardrails, parseApprovalPrompt, parseCritique, passes, runKind, runSummary,
+  countLlmCalls, describeEvents, describeRun, latestCritique, latestGuardrails, parseApprovalPrompt, parseCritique, passes, runKind, runSummary,
   shortModel, stepLabel, type TraceEvent,
 } from "./parse.ts";
 
@@ -117,4 +117,46 @@ test("the live request count adds only calls made after the page's own count", a
   assert.equal(liveRequestCount(4, "2026-10-28T14:01:00Z", events), 6, "the 14:00:55 call was already in the server's count");
   assert.equal(liveRequestCount(4, "2026-10-28T14:02:00Z", events), 4);
   assert.equal(liveRequestCount(0, "2026-10-28T13:00:00Z", events), 3, "failed attempts count too, like quota.py");
+});
+
+// Shapes copied from real run summaries (Neon, Oct 27 to 29).
+const summary = (over: object) => ({ exit_code: 0, dry_run: false, outcomes: [], learnings: { saved: [], skipped: [] }, ...over });
+const topics = (id: string) => ({ post_6b0ad6ec: "bake result" } as Record<string, string>)[id];
+
+test("describes a run by what happened, not by its exit code", () => {
+  const measure = (saved: string[]) => describeRun({ kind: "measure", summary: summary({ outcomes: [{ post_id: null, status: "skipped", reason: "measure only" }], learnings: { saved } }) });
+  assert.deepEqual(measure(["post_6b0ad6ec"]), { title: "Measured", detail: "1 new learning saved", tone: "ok" });
+  assert.equal(measure([]).detail, "nothing new to learn yet");
+
+  const posted = describeRun({ kind: "post", summary: summary({ outcomes: [{ post_id: "post_6b0ad6ec", status: "published", reason: "published", uri: "at://did:plc:x/app.bsky.feed.post/3m" }] }) }, topics);
+  assert.deepEqual(posted, { title: "Posted", detail: "“bake result” is on Bluesky", tone: "ok" });
+
+  const dry = describeRun({ kind: "dry run", summary: summary({ dry_run: true, outcomes: [{ post_id: "post_6b0ad6ec", status: "published", reason: "published", uri: "dryrun://post_6b0ad6ec/05a8" }] }) });
+  assert.equal(dry.title, "Dry run");
+  assert.match(dry.detail, /nothing posted/);
+
+  const refused = describeRun({ kind: "plan", summary: summary({ exit_code: 2, outcomes: [{ post_id: null, status: "skipped", reason: "refused: 3 posts are still waiting (next on 2026-10-28); plan now only runs when the queue is empty" }] }) });
+  assert.deepEqual(refused, { title: "No plan", detail: "posts are still waiting in the queue", tone: "neutral" });
+
+  const declined = describeRun({ kind: "post", summary: summary({ exit_code: 5, outcomes: [{ post_id: "post_d1104ff3", status: "blocked", reason: "blocked: require_approval: human reviewer did not approve" }] }) });
+  assert.deepEqual(declined, { title: "Declined", detail: "you said no to the post", tone: "neutral" });
+
+  assert.equal(describeRun({ kind: "post", summary: summary({ exit_code: 6 }) }).title, "Skipped");
+  assert.equal(describeRun({ kind: "measure", summary: summary({ learnings: { saved: ["post_6b0ad6ec"] } }) }, topics).detail, "new learning from “bake result”");
+  const deferred = describeRun({ kind: "post", summary: summary({ outcomes: [{ post_id: "post_6b0ad6ec", status: "carried_forward",
+    reason: "no draft: LLMBudgetExceeded: critic: upstream attempt budget of 4 used" }] }) }, topics);
+  assert.equal(deferred.detail, "it ran out of model requests; “bake result” waits for the next run");
+  assert.equal(describeRun({ kind: "post", summary: summary({ outcomes: [{ post_id: null, status: "planned", reason: "planned 5 posts" }] }) }).detail, "queued 5 posts");
+});
+
+test("reads a topic post's outcome from its events, since run_post writes no summary", () => {
+  const start = ev({ summary_in: "run_post", summary_out: "start: dry_run=False" });
+  const blocked = ev({ summary_in: "publish post_857ad6bb", summary_out: "blocked: require_approval: human reviewer did not approve", ok: false });
+  assert.equal(describeEvents([start, blocked]).title, "Declined");
+  const failed = ev({ summary_in: "inner loop post_1b2578ab attempt 1", ok: false,
+    summary_out: "failed: LLMOutputError: writer: invalid Draft after one repair attempt: text: is 391 characters; the limit is 300" });
+  assert.deepEqual(describeEvents([start, failed]), { title: "Failed", detail: "the draft stayed at 391 characters (limit 300)", tone: "error" });
+  const now = Date.parse("2026-10-26T14:10:00Z");
+  assert.equal(describeEvents([start], undefined, now).title, "Running", "5 minutes since the last event");
+  assert.equal(describeEvents([start], undefined, now + 60 * 60 * 1000).title, "Ended", "an hour of silence is not a live run");
 });

@@ -17,7 +17,10 @@ export type PlanRecord = { plan_id: string; run_id: string; week_of: string; rat
 export type PlanState = { plans: PlanRecord[]; posts: PostRecord[] };
 export type Approved = { run_id?: string; post_id?: string; status?: string; text?: string; uri?: string; posted_at?: string; dry_run?: boolean };
 export type Learning = { run_id: string; post_id: string; metrics: Record<string, number>; insight: string };
-export type RunRow = { run_id: string; started_at: string; updated_at: string; n: number; first: TraceEvent | null; summary: TraceEvent | null };
+export type RunRow = {
+  run_id: string; started_at: string; updated_at: string; n: number;
+  first: TraceEvent | null; summary: TraceEvent | null; publish: TraceEvent | null; last: TraceEvent | null;
+};
 
 export async function planState(): Promise<PlanState> {
   const rows = await sql()`select data from docs where name = 'plan_state.json'`;
@@ -37,8 +40,10 @@ export async function log<T>(name: string): Promise<T[]> {
 
 export async function recentRuns(limit = 20): Promise<RunRow[]> {
   const rows = await sql()`
-    select run_id, started_at, updated_at, jsonb_array_length(events) as n, events->0 as first,
-           (select e from jsonb_array_elements(events) e where e->>'summary_in' like 'run_summary%' limit 1) as summary
+    select run_id, started_at, updated_at, jsonb_array_length(events) as n, events->0 as first, events->-1 as last,
+           (select e from jsonb_array_elements(events) e where e->>'summary_in' like 'run_summary%' limit 1) as summary,
+           (select e from jsonb_array_elements(events) e
+             where e->>'kind' = 'decision' and e->>'summary_in' like 'publish post_%' limit 1) as publish
     from runs order by started_at desc limit ${limit}`;
   return rows as RunRow[];
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { Tone } from "@/lib/parse";
@@ -67,15 +68,22 @@ export function Card({ children, className, title, right, flush }: { children: R
   );
 }
 
-export function Stat({ label, value, sub, children }: { label: string; value: ReactNode; sub: ReactNode; children?: ReactNode }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong">
-      <span className="t-label text-fg-3">{label}</span>
-      <span className="t-metric truncate">{value}</span>
+/** Tiles in a row share one height (flex-1 inside Reveal's wrapper), with the value on one line and the note at the
+ * bottom, so a tile with a meter or a long note never sits taller than its neighbours. */
+/** words: a value that is a word ("Measured"), set in the sans face at a size that fits a phone tile; mono is for numbers. */
+export function Stat({ label, value, sub, href, words, children }: { label: string; value: ReactNode; sub?: ReactNode; href?: string; words?: boolean; children?: ReactNode }) {
+  const body = (
+    <>
+      <span className="t-label flex items-center gap-1 truncate text-fg-3" title={label}>
+        {label}{href && <span aria-hidden className="ml-auto text-fg-3 transition-transform duration-200 group-hover:translate-x-0.5">→</span>}
+      </span>
+      <span className={words ? "truncate text-[22px] leading-8 font-semibold tracking-tight md:text-[26px]" : "t-metric truncate"}>{value}</span>
       {children}
-      <span className="t-small text-fg-2">{sub}</span>
-    </div>
+      {sub && <span className="t-small mt-auto line-clamp-2 text-fg-2">{sub}</span>}
+    </>
   );
+  const box = "group flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-line bg-surface p-4 transition-colors duration-200 hover:border-line-strong";
+  return href ? <Link href={href} className={box}>{body}</Link> : <div className={box}>{body}</div>;
 }
 
 export function Meter({ used, max }: { used: number; max: number }) {

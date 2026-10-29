@@ -81,6 +81,10 @@ Geist and Geist Mono (`next/font` ships both).
 - When the backend is asleep (Render free tier), the system light is grey with "waking…" and the run buttons are disabled
   until `/health` answers.
 - Red appears only for failures and Reject; amber only for things waiting on the owner.
+- Runs are described by what happened, never by exit code alone (`describeRun` in `web/lib/parse.ts`): a title (Posted,
+  Dry run, Measured, Declined, Blocked, Escalated, Deferred, Planned, No plan, Failed) and one plain line naming the post
+  by its topic. Used by the last-run tile (a link to the trace), Recent traces, the Traces list, the trace header and the
+  run island. Topic posts write no run summary, so their outcome is read from the publish or inner-loop event.
 
 ## Motion (added with the KokonutUI pass)
 
@@ -100,26 +104,31 @@ reduce-motion setting (`MotionConfig reducedMotion="user"`). Ease-out `cubic-bez
 
 KokonutUI components live in `web/components/kokonutui/` (MIT, attribution kept in each file).
 
-## Navigation glass (added 2026-10-29)
+## Navigation surfaces (added 2026-10-29, matte since the same day)
 
-The navigation floats over content as liquid glass: a translucent fill with a 22px backdrop blur, a light top edge and a
-darker bottom edge (`glass` utility, tokens `--glass-*`). Glass is only for navigation that sits above scrolling content;
-cards stay solid. With "reduce transparency" on, glass falls back to `bg/surface`.
+The navigation floats over content on a **matte** surface: a near-solid fill with a light 16px backdrop blur, a hairline
+border and a soft shadow, and no shine (`matte` utility, tokens `--matte-*`). The active item's lens is a flat, slightly
+lighter fill (`matte-lens`). Cards stay solid. With "reduce transparency" on, matte falls back to `bg/surface`.
 
-- **Desktop sidebar**: a floating glass panel, 236px or 68px icons. There is no collapse button: the panel's right edge is
+- **Desktop sidebar**: a floating matte panel, 236px or 68px icons. There is no collapse button: the panel's right edge is
   the handle. Drag it and the labels fade with the width (rubber-banding past either end); let go and it snaps open or
   shut. A click on the edge or Ctrl/⌘ B toggles it. The width is kept in a `nav` cookie so it renders right on load.
-  Collapsed items show glass tooltips. The owner's GitHub photo sits at the foot, with sign out.
-- **Active item**: one glass lens per nav that springs to the page you open. It moves on press, before the server render
+  Collapsed items show matte tooltips. The owner's GitHub photo sits at the foot, with sign out.
+- **Active item**: one lens per nav that springs to the page you open. It moves on press, before the server render
   arrives (a skeleton, `app/(app)/loading.tsx`, fills the wait). **Press and hold** (260 ms) lifts the lens, as on iOS:
   it grows, follows the pointer across items, lights the one under it, and opening happens on release.
 - **Live badges**: an amber pulse on Control while a draft needs you, a steady blue light on Traces while a run is going.
-- **Phone header**: transparent at the top; once content scrolls under it, it turns to glass and the wordmark swaps for the
-  page title.
-- **Phone tab bar**: a floating glass bar with the same lens. Scrolling down shrinks it to icons (44px targets); scrolling
+- **Phone header**: no box. Content scrolling under it melts into a progressive blur (stacked backdrop blurs, strongest at
+  the top edge, gone just below the header); once scrolled, the wordmark swaps for the page title.
+- **Phone tab bar**: a floating matte bar with the same lens. Scrolling down shrinks it to icons (44px targets); scrolling
   up restores the labels.
-- **Phone account menu**: the GitHub photo in the header opens a glass sheet with the theme switch and sign out.
+- **Phone account menu**: the GitHub photo in the header opens a matte sheet with the theme switch and sign out.
 - On phones the Control actions stack: Run next post full width, Plan next week and Dry run beneath.
+
+## Stat tiles
+
+Tiles in a row are one height, and every row in a grid is too (`auto-rows-fr`): the label and value on one line each,
+the note pinned to the bottom (at most two lines).
 
 ## Theme
 
