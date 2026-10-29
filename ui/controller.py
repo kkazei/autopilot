@@ -1,8 +1,9 @@
-"""Runs the outer loop for the local app, one run at a time, and turns its approval prompt into two buttons.
+"""Runs the outer loop for the hosted backend (backend/app.py), one run at a time, and turns its approval prompt into
+an answer the web app can give.
 
-No Gradio here, so the run, the approval wait and the log are tested without a browser. A run goes through
-scripts.run_outer.main, the same entry point as the terminal, so every harness check and the outer lock still
-apply: the app only changes where messages go and where the approval answer comes from.
+It started as the local Gradio app's runner (archived in the local-app-final release). A run goes through
+scripts.run_outer.main, the same entry point as the terminal, so every harness check and the outer lock still apply:
+the controller only changes where messages go and where the approval answer comes from.
 """
 
 from __future__ import annotations
@@ -11,12 +12,9 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Literal
 
-from harness import guardrails, plan_state, quota, trace
-from harness.fileio import LockTimeout
-from harness.publish import ApprovedLogError, live_records, utc_now
+from harness import trace
 
 # Long enough to read a draft and check a fact; short enough that a forgotten window doesn't hold the outer lock
 # for hours. Timing out reads as "nobody was there", so the post is carried forward rather than blocked.
@@ -196,93 +194,3 @@ class Controller:
                 self._answered.set()
         if thread is not None:
             thread.join(wait_s)
-
-
-LOW_QUOTA = 10  # under this many requests left, a run (which may use up to 16) can stop part-way
-
-
-@dataclass(frozen=True)
-class Budget:
-    used: int
-    limit: int
-    next_cap: int
-    unreadable: int
-    posting_ok: bool
-    posting: str  # "OK now", or why not
-
-    @property
-    def low(self) -> bool:
-        return self.limit - self.used < LOW_QUOTA
-
-
-def budget(now: datetime | None = None) -> Budget:
-    """The harness's own request count and rate cap, so the page shows exactly what will cap the next run."""
-    now = now or utc_now()
-    cap, used, unreadable = quota.run_cap(now)
-    try:
-        rate = guardrails.check_rate_cap(now, live_records())
-        ok, posting = rate["ok"], "OK now" if rate["ok"] else "; ".join(rate["reasons"])
-    except ApprovedLogError:
-        ok, posting = False, "blocked, the publish log is unreadable"
-    return Budget(used, quota.DAILY_REQUEST_LIMIT, cap, unreadable, ok, posting)
-
-
-def budget_line(now: datetime | None = None) -> str:
-    """The same reading as one line of text."""
-    b = budget(now)
-    line = f"**Requests in the last 24 hours: {b.used} / {b.limit} · next run may make {b.next_cap}**"
-    if b.unreadable:
-        line += f" ({b.unreadable} traces unreadable, so this may be low)"
-    line += f" · posting: {b.posting}"
-    if b.low:
-        line += "\n\nFew requests left: a run may stop part-way. Consider waiting until the count drops."
-    return line
-
-
-def quota_text(now: datetime | None = None) -> str:
-    now = now or utc_now()
-    cap, used, unreadable = quota.run_cap(now)
-    note = f" ({unreadable} trace files unreadable, so this may be low)" if unreadable else ""
-    return (f"{used} of {quota.DAILY_REQUEST_LIMIT} model requests used in the last 24 hours{note}. "
-            f"The next run may make up to {cap}.")
-
-
-def rate_text(now: datetime | None = None) -> str:
-    now = now or utc_now()
-    try:
-        published = live_records()
-    except ApprovedLogError as e:
-        return f"Cannot read the publish log, so no post can go out: {e}"
-    cap = guardrails.check_rate_cap(now, published)
-    if cap["ok"]:
-        return "A post can go out now (max 3 a day, 60 minutes apart)."
-    return "No post can go out yet: " + "; ".join(cap["reasons"])
-
-
-PLAN_HEADERS = ["day", "post", "topic", "goal", "status", "last note"]
-
-
-def topic_choices() -> list[str]:
-    """Topics the planner has already used, newest first, as suggestions; the form still takes any typed topic."""
-    try:
-        state = plan_state.load_state()
-    except (plan_state.PlanStateError, OSError, LockTimeout):
-        return []
-    seen: dict[str, str] = {}
-    for p in sorted(state.posts, key=lambda p: p.day, reverse=True):
-        seen.setdefault(p.topic.strip().lower(), p.topic.strip())
-    return list(seen.values())
-
-
-def plan_rows() -> tuple[str, list[list[str]], list[str]]:
-    """(the latest plan's rationale, one row per post, the ids a person may requeue)."""
-    try:
-        state = plan_state.load_state()
-    except (plan_state.PlanStateError, OSError, LockTimeout) as e:
-        return f"The plan could not be read: {e}", [], []
-    rationale = state.plans[-1].rationale if state.plans else "No plan yet. The next run plans the week."
-    posts = sorted(state.posts, key=lambda p: (p.day, p.id))
-    rows = [[p.day.isoformat(), p.id, p.topic, p.goal, p.status, p.history[-1].reason if p.history else ""]
-            for p in posts]
-    return rationale, rows, [p.id for p in posts if p.status == "escalated"]
-

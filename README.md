@@ -88,7 +88,7 @@ Models are listed in `OPENROUTER_MODELS`; on a 429 or a timeout the client backs
 
 **Hermes writer runtime (opt-in).** By default every agent calls OpenRouter straight from the harness. With `AUTOPILOT_WRITER_RUNTIME=hermes` (and the `hermes` CLI installed), the writer's first call of each attempt runs through [Hermes Agent](https://github.com/NousResearch/hermes-agent) behind a harness-owned LLM proxy that holds the key; a cross-check of the proxy, Hermes's output and the tool call log fails closed, and anything it cannot trust falls back to the direct chain. Repairs, the critic and the other roles always run direct. The hosted backend and the daily job run direct. One live run so far: Hermes answered and the cross-check passed, but its draft was over the length limit, so the post was written by the harness's direct repair.
 
-**Retired:** the local Gradio app (`ui/app.py`, `Autopilot.bat`) and its Save-to-GitHub data PRs, and the static dashboard (`dashboard/`, https://autopilot.jirroaeron.workers.dev/). Both read and write the `data/` files in git, which stopped updating when Neon became the source of truth on Oct 28, so they show the state up to then. Don't post from the Gradio app: the hosted rate cap cannot see its posts. `ui/controller.py` stays; the backend uses it.
+**Retired:** the local Gradio app with its Save-to-GitHub data PRs, and the static dashboard. Both worked on the `data/` files in git, which stopped updating when Neon became the source of truth on Oct 28. Their last version is archived in the [local-app-final](https://github.com/kkazei/autopilot/releases/tag/local-app-final) release. `ui/controller.py` stays; the backend uses it.
 
 ## What is proven, and what is partial
 
@@ -99,7 +99,7 @@ Models are listed in `OPENROUTER_MODELS`; on a 429 or a timeout the client backs
 - The hosted path end to end: a dry run started from the web app on Render, pulled from Neon, ran plan, write, critique and every guardrail, waited for approval in the browser, and pushed its trace back (`run_20261028_140054_e50c59`).
 - A Bluesky timeout after sending: the pending row blocked a retry, the account's server showed no post, and the row was settled by hand without editing history (`run_20261025_103042_bfa092`).
 - On real models, from real traces: JSON/length repair (it succeeded several times and failed cleanly twice), 429 backoff and fallback down the chain, and guardrails before every publish. The rate cap blocked a run before any model call on the real harness (`data/evidence/stage_d`).
-- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering, the database lock and sync) in automated tests: 608 Python tests that run offline (2 more need a separate test database) and 23 web tests.
+- The harness's failure handling (revision cap, JSON repair, rate cap, banned phrase, 429 fallback, prompt injection, publish ordering, the database lock and sync) in automated tests: 572 Python tests that run offline (2 more need a separate test database) and 23 web tests.
 
 **Partial or not proven yet**
 - **The critic is the weak link.** Calibration on 10 hand-scored drafts: it agreed on 6 of 10 and was too lenient on d03, d06, d08 and d10. One rubric change raised that to 7 of 10, which is one draft and within run-to-run noise, measured on the same 10 drafts. It is still lenient on d03, d06 and d10. On real drafts it scored an invented class time, invented crust details, a claim about customers and urgency pressure 5 out of 5, and it noticed invented scarcity ("a few spots remain") but still passed it at 4. Human approval caught each one, which is why approval stays mandatory.
@@ -121,6 +121,5 @@ Next steps, in order:
 2. **A code check for times, prices and numbers that are not in the brief.** It would have caught the invented class
    time without relying on the critic.
 3. **Check the account's server automatically after a publish timeout**, instead of leaving "outcome unknown" for a human to settle by hand.
-4. **Remove the retired local app and static dashboard** once the web app has run on its own for a few days.
 
 Details and decisions: `docs/HANDOFF.md` (the build log up to Oct 26) and `docs/WEB_APP_PLAN.md` (the web app). Deploying: `docs/DEPLOY.md`.

@@ -69,8 +69,6 @@ tests, type check and production build (no secrets or database needed).
 
 ## Retired
 
-- **The static dashboard** (`dashboard/`, https://autopilot.jirroaeron.workers.dev/, Cloudflare Workers Builds) is built
-  from the `data/` files in git. Those stopped updating when Neon became the source of truth on Oct 28, so it shows the
-  state up to then. The web app replaces it.
-- **The local Gradio app** and its Save-to-GitHub data PRs: same reason. Don't post from it; the hosted rate cap cannot
-  see its posts.
+The static dashboard (Cloudflare Workers Builds) and the local Gradio app were removed on Oct 29; both worked on the
+`data/` files in git, which stopped updating when Neon became the source of truth. Their last version is the
+[local-app-final](https://github.com/kkazei/autopilot/releases/tag/local-app-final) release. The Cloudflare Worker named `autopilot` is no longer built from this repository.

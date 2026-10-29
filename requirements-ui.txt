@@ -1,3 +1,0 @@
-# The local app (ui/, Autopilot.bat) only. Kept out of requirements.txt so CI and the scheduled run never install it.
-# Install on top of requirements.txt; pinned because gradio's dependency tree is large and moves fast.
-gradio==6.30.0      # the page itself; no stdlib way to serve an interactive local UI with live updates
