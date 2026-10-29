@@ -119,7 +119,7 @@ export function PageHeader({ title, sub, crumb, children }: { title: ReactNode; 
         <h1 className="t-title-lg md:t-display">{title}</h1>
         {sub && <p className="t-small text-fg-2 md:text-sm">{sub}</p>}
       </div>
-      {children && <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>}
+      {children && <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">{children}</div>}
     </div>
   );
 }

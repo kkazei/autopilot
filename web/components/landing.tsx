@@ -1,8 +1,8 @@
 "use client";
 
 import {
-  ArrowRight, Ban, CalendarDays, ChartColumn, Copy, Database, EyeOff, Gauge, Globe, Lightbulb, PenLine, Repeat, Scale,
-  Send, Server, ShieldCheck, Timer, UserCheck, Workflow, type LucideIcon,
+  ArrowRight, Ban, CalendarDays, ChartColumn, Copy, EyeOff, Gauge, Lightbulb, PenLine, Repeat, RotateCcw, Scale,
+  Send, ShieldCheck, Timer, UserCheck, type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import DynamicText from "./kokonutui/dynamic-text";
 import HoldButton from "./kokonutui/hold-button";
 import RunLanes from "./kokonutui/run-lanes";
 import { LogoMark, Wordmark } from "./logo";
+import { ThemeCycle } from "./theme-toggle";
 import { EASE_OUT } from "./motion";
 import { Badge, buttonClass, cx, GuardChip, ScoreTile } from "./ui";
 import { SAMPLE_RUN } from "@/lib/sample-run";
@@ -38,10 +39,9 @@ function InView({ children, className, step }: { children: ReactNode; className?
   );
 }
 
-function SectionHead({ kicker, title, sub }: { kicker: string; title: ReactNode; sub: ReactNode }) {
+function SectionHead({ title, sub }: { title: ReactNode; sub: ReactNode }) {
   return (
     <motion.div variants={rise} className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 text-center md:mb-14">
-      <span className="t-label text-fg-3">{kicker}</span>
       <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-4xl">{title}</h2>
       <p className="text-base text-fg-2 text-pretty md:text-lg">{sub}</p>
     </motion.div>
@@ -56,6 +56,7 @@ function Nav() {
         <nav className="ml-auto flex items-center gap-1 sm:gap-2">
           <a href="#how" className={buttonClass("ghost", "hidden sm:inline-flex")}>How it works</a>
           <a href={REPO_URL} className={buttonClass("ghost")} target="_blank" rel="noreferrer"><GitHubMark /> <span className="hidden sm:inline">GitHub</span></a>
+          <ThemeCycle />
           <Link href="/login" className={buttonClass("secondary")}>Sign in</Link>
         </nav>
       </div>
@@ -69,9 +70,6 @@ function Hero() {
       <motion.div initial="hidden" animate="shown" variants={stagger(0.09)}
         className="relative z-10 mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
         <div className="flex flex-col items-start gap-6">
-          <motion.span variants={rise}>
-            <Badge tone="warn">human approval on every post</Badge>
-          </motion.span>
           <motion.h1 variants={rise} className="text-5xl font-semibold tracking-tight text-balance text-fg md:text-6xl lg:text-7xl">
             A week of posts, on&nbsp;autopilot.
           </motion.h1>
@@ -123,25 +121,38 @@ const STEPS: [LucideIcon, string, string, boolean?][] = [
   [Lightbulb, "Learn", "Turns engagement into one-line lessons the next week's plan has to use."],
 ];
 
+/** The steps as a track, not a card grid: nodes on one line (two rows of four on desktop, a column on phones), the owner's
+ * step lit amber, and a return to Plan, because the loop is the point. */
 function Loop() {
   return (
     <section id="how" className="scroll-mt-16 px-4 py-20 md:px-6 md:py-28">
       <InView className="mx-auto max-w-6xl">
-        <SectionHead kicker="how it works" title="One loop, every week" sub="Eight steps from brand brief to lessons learned. You are one of them." />
-        <motion.ol variants={stagger(0.06)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map(([Icon, title, body, you], i) => (
-            <motion.li key={title} variants={rise}
-              className={cx("relative flex flex-col gap-3 rounded-lg border bg-surface p-5 transition-colors", you ? "border-warn" : "border-line hover:border-line-strong")}>
-              <div className="flex items-center gap-3">
-                <span className={cx("flex size-9 items-center justify-center rounded-md", you ? "bg-warn-bg text-warn" : "bg-raised text-fg-2")}><Icon className="size-4" /></span>
-                <span className="t-mono-sm text-fg-3">{String(i + 1).padStart(2, "0")}</span>
-                {you && <LogoMark size={18} className="ml-auto text-fg-2" />}
-              </div>
-              <h3 className="t-title">{title}</h3>
-              <p className="t-small text-fg-2 md:text-sm">{body}</p>
-            </motion.li>
-          ))}
+        <SectionHead title="One loop, every week" sub="Eight steps from brand brief to lessons learned. You are one of them." />
+        <motion.ol variants={stagger(0.06)} className="grid gap-y-8 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-14">
+          {STEPS.map(([Icon, title, body, you], i) => {
+            const rowEnd = i % 4 === 3;
+            const last = i === STEPS.length - 1;
+            return (
+              <motion.li key={title} variants={rise} className="relative pl-14 lg:pt-14 lg:pl-0">
+                {!last && <span aria-hidden className="absolute top-10 bottom-[-2rem] left-[19px] w-px bg-line lg:hidden" />}
+                {!rowEnd && <span aria-hidden className="absolute top-5 right-[-1.5rem] left-10 hidden h-px bg-line lg:block" />}
+                <span className={cx("absolute top-0 left-0 grid size-10 place-items-center rounded-full border",
+                  you ? "border-warn bg-warn-bg text-warn shadow-[0_0_0_6px_var(--status-warn-bg)]" : "border-line-strong bg-canvas text-fg-2")}>
+                  <Icon className="size-4" />
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  <h3 className={cx("t-title flex items-center gap-2", you && "text-warn")}>
+                    {title}{you && <LogoMark size={16} className="text-fg-2" />}
+                  </h3>
+                  <p className="text-sm text-fg-2 text-pretty">{body}</p>
+                </div>
+              </motion.li>
+            );
+          })}
         </motion.ol>
+        <motion.p variants={rise} className="t-small mt-10 flex items-center gap-2 text-fg-3 lg:justify-end">
+          <RotateCcw className="size-3.5" /> then back to Plan, with the lessons in hand
+        </motion.p>
       </InView>
     </section>
   );
@@ -152,7 +163,6 @@ function Record() {
     <section className="border-y border-line bg-surface/40 px-4 py-20 md:px-6 md:py-28">
       <InView className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <motion.div variants={rise} className="flex flex-col gap-4">
-          <span className="t-label text-fg-3">every step on the record</span>
           <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-4xl">See exactly what the agents did</h2>
           <p className="text-fg-2 text-pretty">
             Every model call, tool call, check and decision is written to a trace, with secrets removed before it is saved. Replay
@@ -222,15 +232,15 @@ function Guardrails() {
   return (
     <section className="px-4 py-20 md:px-6 md:py-28">
       <InView className="mx-auto max-w-6xl">
-        <SectionHead kicker="guardrails" title="It never posts on its own" sub="The agents write. Code decides what is allowed. You decide what goes out." />
+        <SectionHead title="It never posts on its own" sub="The agents write. Code decides what is allowed. You decide what goes out." />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <DemoApproval />
-          <motion.ul variants={stagger(0.05)} className="grid gap-3 sm:grid-cols-2">
+          <motion.ul variants={stagger(0.05)} className="flex flex-col divide-y divide-line border-y border-line">
             {RULES.map(([Icon, title, body]) => (
-              <motion.li key={title} variants={rise} className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-4">
-                <Icon className="size-4 text-fg-2" />
+              <motion.li key={title} variants={rise} className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3 gap-y-1 py-4">
+                <Icon className="mt-0.5 size-4 text-fg-2" />
                 <h3 className="text-sm font-medium">{title}</h3>
-                <p className="t-small text-fg-2">{body}</p>
+                <p className="t-small col-start-2 text-fg-2 text-pretty">{body}</p>
               </motion.li>
             ))}
           </motion.ul>
@@ -240,29 +250,38 @@ function Guardrails() {
   );
 }
 
-const STACK: [LucideIcon, string, string][] = [
-  [Workflow, "Free AI models", "Open models on OpenRouter's free tier, with a fallback chain when one is busy."],
-  [Server, "Python harness", "Owns the loop, the checks and every publish. Runs on Render's free tier."],
-  [Database, "Postgres", "Plans, posts, learnings and traces in Neon's free tier."],
-  [Globe, "This app", "Next.js on Vercel's free tier, for approving posts from your phone."],
-  [CalendarDays, "Daily measuring", "A scheduled GitHub Action reads engagement every morning."],
+const STACK: [string, string, string][] = [
+  ["Models", "OpenRouter free models, with a fallback chain when one is busy", "OpenRouter"],
+  ["Harness", "The loop, the checks and every publish, in Python", "Render"],
+  ["Database", "Plans, posts, learnings and traces", "Neon"],
+  ["This app", "Approving posts and reading traces, from a phone or a desk", "Vercel"],
+  ["Measuring", "Reads engagement every day, or on demand with Measure now", "GitHub Actions"],
 ];
 
+/** The $0 claim as a bill: each piece, where it runs, what it costs, and the total. */
 function Stack() {
   return (
     <section className="border-t border-line bg-surface/40 px-4 py-20 md:px-6 md:py-28">
-      <InView className="mx-auto max-w-6xl">
-        <SectionHead kicker="what it runs on" title={<>Built to run for <span className="text-ok">$0</span> a month</>}
+      <InView className="mx-auto max-w-4xl">
+        <SectionHead title={<>Built to run for <span className="text-ok">$0</span> a month</>}
           sub="Every piece sits on a free tier, and a hard cap of 45 model requests a day keeps it there." />
-        <motion.ul variants={stagger(0.05)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {STACK.map(([Icon, title, body]) => (
-            <motion.li key={title} variants={rise} className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-4">
-              <Icon className="size-4 text-fg-2" />
-              <h3 className="text-sm font-medium">{title}</h3>
-              <p className="t-small text-fg-2">{body}</p>
-            </motion.li>
-          ))}
-        </motion.ul>
+        <motion.div variants={rise} className="overflow-hidden rounded-xl border border-line bg-surface">
+          <ul className="divide-y divide-line">
+            {STACK.map(([piece, what, where]) => (
+              <li key={piece} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-6 gap-y-1 px-5 py-4 sm:grid-cols-[7rem_minmax(0,1fr)_8rem_2.5rem]">
+                <span className="text-sm font-medium">{piece}</span>
+                <span className="t-small col-span-2 row-start-2 text-fg-2 sm:col-span-1 sm:row-start-auto">{what}</span>
+                <span className="t-mono-sm hidden text-fg-3 sm:block">{where}</span>
+                <span className="t-mono col-start-2 row-start-1 text-right text-fg-2 sm:col-start-auto sm:row-start-auto">$0</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-baseline gap-4 border-t border-line-strong bg-raised/60 px-5 py-4">
+            <span className="text-sm font-medium">Per month</span>
+            <span className="t-small text-fg-3">capped at 45 model requests a day</span>
+            <span className="t-mono ml-auto text-lg font-medium text-ok">$0</span>
+          </div>
+        </motion.div>
       </InView>
     </section>
   );

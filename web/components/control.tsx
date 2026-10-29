@@ -62,14 +62,37 @@ export function RunButtons() {
     setPending(null);
   };
   return (
-    <div className="flex flex-wrap items-center gap-2" title={why}>
-      <Flash msg={msg} />
-      <button className={buttonClass("ghost")} disabled={Boolean(why)} onClick={() => start("dry", { kind: "next", dry_run: true })}>Dry run</button>
-      <button className={buttonClass("secondary")} disabled={Boolean(why)} onClick={() => start("plan", { kind: "plan" })}>Plan next week</button>
-      <button className={buttonClass("primary")} disabled={Boolean(why)} onClick={() => start("next", { kind: "next" })}>
+    <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap" title={why}>
+      <span className="col-span-2 empty:hidden sm:order-none"><Flash msg={msg} /></span>
+      <button className={buttonClass("primary", "col-span-2 h-11 rounded-xl sm:order-last sm:h-9 sm:rounded-md")} disabled={Boolean(why)} onClick={() => start("next", { kind: "next" })}>
         {pending === "next" ? "Starting…" : "Run next post"}
       </button>
+      <button className={buttonClass("secondary", "h-10 rounded-xl sm:h-9 sm:rounded-md")} disabled={Boolean(why)} onClick={() => start("plan", { kind: "plan" })}>Plan next week</button>
+      <button className={buttonClass("ghost", "h-10 rounded-xl border border-line sm:order-first sm:h-9 sm:rounded-md sm:border-transparent")} disabled={Boolean(why)} onClick={() => start("dry", { kind: "next", dry_run: true })}>Dry run</button>
     </div>
+  );
+}
+
+/** The daily schedule's measure-only run, on demand: reads engagement and saves learnings, never drafts or posts. */
+export function MeasureButton({ kind = "secondary" }: { kind?: "secondary" | "ghost" }) {
+  const { act } = useLive();
+  const [pending, setPending] = useState(false);
+  const [msg, setMsg] = useFlash();
+  const why = useRunBlock(pending);
+  const start = async () => {
+    setPending(true);
+    const r = await act({ action: "run", kind: "measure" });
+    setMsg({ ok: r.ok, text: r.message });
+    setPending(false);
+  };
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2" title={why ?? "Reads likes, reposts and replies now and saves learnings: at most 4 model requests, no drafts, nothing posted"}>
+      <Flash msg={msg} />
+      <button className={buttonClass(kind)} disabled={Boolean(why)} onClick={start}>
+        <Icon name="refresh" size={14} className={cx(pending && "animate-spin")} />
+        {pending ? "Starting…" : "Measure now"}
+      </button>
+    </span>
   );
 }
 

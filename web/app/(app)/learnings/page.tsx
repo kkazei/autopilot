@@ -1,6 +1,7 @@
 import { ArrowUpRight, Heart, Lightbulb, MessageCircle, Repeat2 } from "lucide-react";
 import Link from "next/link";
 
+import { MeasureButton } from "@/components/control";
 import { FilterTabs } from "@/components/filter-tabs";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
@@ -28,7 +29,9 @@ export default async function Learnings({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <PageHeader title="Learnings" sub="What each published post taught the planner. The latest lesson per post feeds next week's plan." />
+      <PageHeader title="Learnings" sub="What each published post taught the planner. The latest lesson per post feeds next week's plan.">
+        <MeasureButton />
+      </PageHeader>
 
       <Reveal className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Summary label="posts measured" value={groups.length} />
@@ -42,7 +45,7 @@ export default async function Learnings({ searchParams }: { searchParams: Promis
       }))} />
 
       {shown.length === 0 ? (
-        <Card><p className="t-small text-fg-3">{groups.length === 0 ? "Learnings appear after the daily measure run reads engagement on posts older than 2 hours." : "Nothing in this filter."}</p></Card>
+        <Card><p className="t-small text-fg-3">{groups.length === 0 ? "Learnings appear once a measure run reads engagement on posts older than 2 hours: daily on a schedule, or now with Measure now." : "Nothing in this filter."}</p></Card>
       ) : (
         <Reveal key={filter} className="flex flex-col gap-4" step={0.06}>
           {shown.map((g) => <PostCard key={g.post_id} g={g} />)}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ApprovalCard, LatestRun, RunButtons, TopicForm } from "@/components/control";
+import { ApprovalCard, LatestRun, MeasureButton, RunButtons, TopicForm } from "@/components/control";
 import { LiveQuota } from "@/components/live-quota";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
@@ -96,7 +96,11 @@ export default async function Control() {
                   {Object.entries(learning.metrics).map(([k, v]) => <span key={k}>{v} {k}</span>)}
                 </p>
               </div>
-            ) : <p className="t-small text-fg-3">Learnings appear after the daily measure run reads engagement.</p>}
+            ) : <p className="t-small text-fg-3">Learnings appear after a measure run reads engagement.</p>}
+            <div className="mt-4 flex items-center gap-3 border-t border-line pt-4">
+              <Link href="/learnings" className="t-small text-fg-2 hover:text-fg">all learnings →</Link>
+              <span className="ml-auto"><MeasureButton kind="ghost" /></span>
+            </div>
           </Card>
         </Reveal>
       </div>

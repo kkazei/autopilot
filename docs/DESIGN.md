@@ -100,6 +100,39 @@ reduce-motion setting (`MotionConfig reducedMotion="user"`). Ease-out `cubic-bez
 
 KokonutUI components live in `web/components/kokonutui/` (MIT, attribution kept in each file).
 
+## Navigation glass (added 2026-10-29)
+
+The navigation floats over content as liquid glass: a translucent fill with a 22px backdrop blur, a light top edge and a
+darker bottom edge (`glass` utility, tokens `--glass-*`). Glass is only for navigation that sits above scrolling content;
+cards stay solid. With "reduce transparency" on, glass falls back to `bg/surface`.
+
+- **Desktop sidebar**: a floating glass panel, 236px or 68px icons. There is no collapse button: the panel's right edge is
+  the handle. Drag it and the labels fade with the width (rubber-banding past either end); let go and it snaps open or
+  shut. A click on the edge or Ctrl/⌘ B toggles it. The width is kept in a `nav` cookie so it renders right on load.
+  Collapsed items show glass tooltips. The owner's GitHub photo sits at the foot, with sign out.
+- **Active item**: one glass lens per nav that springs to the page you open. It moves on press, before the server render
+  arrives (a skeleton, `app/(app)/loading.tsx`, fills the wait). **Press and hold** (260 ms) lifts the lens, as on iOS:
+  it grows, follows the pointer across items, lights the one under it, and opening happens on release.
+- **Live badges**: an amber pulse on Control while a draft needs you, a steady blue light on Traces while a run is going.
+- **Phone header**: transparent at the top; once content scrolls under it, it turns to glass and the wordmark swaps for the
+  page title.
+- **Phone tab bar**: a floating glass bar with the same lens. Scrolling down shrinks it to icons (44px targets); scrolling
+  up restores the labels.
+- **Phone account menu**: the GitHub photo in the header opens a glass sheet with the theme switch and sign out.
+- On phones the Control actions stack: Run next post full width, Plan next week and Dry run beneath.
+
+## Theme
+
+System, Light or Dark, chosen in the sidebar, the phone account menu or the homepage nav. The choice is a `theme` cookie
+that a tiny script in `<head>` applies as `data-theme` on `<html>` before first paint, so pages stay static and nothing
+flashes. The new theme grows as a circle from the switch (View Transitions; an instant swap with reduced motion).
+Tailwind's `dark:` variant follows the same choice.
+
+## Homepage
+
+No labels above headings. The loop is a connected track (amber node for the owner's step, and a return to Plan), the
+guardrails a hairline list beside the hold-to-publish demo, and the $0 claim a bill: each piece, where it runs, $0, total.
+
 ## Time
 
 Every instant is shown in the viewer's timezone (24-hour), read from the browser and remembered in a `tz` cookie so

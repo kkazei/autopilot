@@ -219,6 +219,9 @@ def test_topic_posts_and_plan_now_build_the_terminal_flags():
     assert post == [["--topic", "Rye crust", "--goal", "click", "--dry-run"],
                     ["--topic", "Rye crust", "--goal", "engagement", "--angle", "the crackle as it cools"]]
     assert outer == [["--plan-only"]] and s.what == "plan now" and not s.dry_run
+    ctl.measure_now()
+    s = wait_for(ctl, lambda s: done(s) and len(outer) == 2)
+    assert outer[-1] == ["--measure-only"] and s.what == "measure" and not s.dry_run
 
 
 def test_only_one_run_of_any_kind_at_a_time():
@@ -227,6 +230,7 @@ def test_only_one_run_of_any_kind_at_a_time():
     ctl.start(dry_run=True)
     assert "already going" in ctl.start_topic("Rye", "", "click", dry_run=True)
     assert "already going" in ctl.plan_now()
+    assert "already going" in ctl.measure_now()
     release.set()
     wait_for(ctl, done)
 
