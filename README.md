@@ -15,7 +15,7 @@ These are enforced in code and covered by tests (see `CLAUDE.md` for the exact w
 3. **Everything is traced.** Every model call and tool call is written to a JSON trace, with secrets redacted.
 4. **Model output is validated.** Each agent's reply must match a schema. If it is not valid JSON, the harness makes one repair attempt and then fails cleanly and logs it.
 5. **The harness decides whether a draft passed.** The critic gives scores; the pass or fail is computed from them against a threshold, never taken from the model's say-so.
-6. **No unbounded loops.** A draft gets at most 3 revisions, then goes to a human. Request budgets cap every run, and a hard cap of 45 model requests a day keeps it inside the free tier.
+6. **No unbounded loops.** A draft gets at most 3 revisions, then goes to a human. Request budgets cap every run, and a hard cap of 50 model requests a day keeps it inside the free tier.
 7. **Each role gets only the tools it needs.** The planner and analyst are read-only, the writer can only read the brand brief, and the critic gets no tools.
 
 ## How it fits together

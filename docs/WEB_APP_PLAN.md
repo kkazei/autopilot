@@ -18,7 +18,7 @@ static dashboard were removed on Oct 29 and archived in the `local-app-final` re
 | Data | **Neon Postgres** is the source of truth. `data/` is imported once; the git Save/Pull cycle retires with Gradio. |
 | How the database meets the harness | A **sync layer** (`harness/db_sync.py`): a hosted run takes one Postgres lock, pulls the state into a working folder, runs the unchanged harness on files, and pushes the result back. Traces are pushed live during the run. |
 | Publishing | Every post from the web needs the owner's approval. The harness gates (schema, brand safety, rate cap) are unchanged. |
-| Model requests | Hard cap of **45 per 24 hours** (`harness/quota.py`), shared by every way of running. |
+| Model requests | Hard cap of **50 per 24 hours** (`harness/quota.py`), shared by every way of running (45 until Oct 29, while the local app shared the key). |
 | Design | A fresh design pass before the screens are built. |
 
 ## Shape

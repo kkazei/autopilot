@@ -63,7 +63,7 @@ Geist and Geist Mono (`next/font` ships both).
 ## Screens (Figma page "Screens")
 
 1. **Control, desktop** (dark and light). 240px sidebar (wordmark, nav, system lights for backend, database and cron, user).
-   Main area: header with Dry run, Plan next week and Run next post. Four stat tiles (requests used out of 45 with a bar, next
+   Main area: header with Dry run, Plan next week and Run next post. Four stat tiles (requests used out of 50 with a bar, next
    post, rate cap, last run). Left column: the approval card (amber border, draft in an inset block, character count, four
    score tiles, guardrail chips, then Approve & publish, Not now and Reject) and This week (QueueRows). Right column (352px):
    live run steps, recent runs and the latest learning.

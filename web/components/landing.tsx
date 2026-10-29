@@ -264,7 +264,7 @@ function Stack() {
     <section className="border-t border-line bg-surface/40 px-4 py-20 md:px-6 md:py-28">
       <InView className="mx-auto max-w-4xl">
         <SectionHead title={<>Built to run for <span className="text-ok">$0</span> a month</>}
-          sub="Every piece sits on a free tier, and a hard cap of 45 model requests a day keeps it there." />
+          sub="Every piece sits on a free tier, and a hard cap of 50 model requests a day keeps it there." />
         <motion.div variants={rise} className="overflow-hidden rounded-xl border border-line bg-surface">
           <ul className="divide-y divide-line">
             {STACK.map(([piece, what, where]) => (
@@ -278,7 +278,7 @@ function Stack() {
           </ul>
           <div className="flex items-baseline gap-4 border-t border-line-strong bg-raised/60 px-5 py-4">
             <span className="text-sm font-medium">Per month</span>
-            <span className="t-small text-fg-3">capped at 45 model requests a day</span>
+            <span className="t-small text-fg-3">capped at 50 model requests a day</span>
             <span className="t-mono ml-auto text-lg font-medium text-ok">$0</span>
           </div>
         </motion.div>
