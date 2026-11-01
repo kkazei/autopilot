@@ -36,6 +36,9 @@ export default async function Plan() {
                           <span className="t-small truncate text-fg-2">{p.angle}</span>
                         </span>
                         <span className="t-mono-sm hidden w-24 text-fg-2 md:block">{p.goal}</span>
+                        <span className="flex justify-end empty:hidden md:w-40 md:empty:flex">
+                          {(p.status === "planned" || p.status === "carried_forward") && <SkipButton postId={p.id} />}
+                        </span>
                         <Badge tone={TONE[p.status] ?? "neutral"}>{p.status.replace("_", " ")}</Badge>
                       </summary>
                       <div className="mt-3 flex flex-col gap-2 pl-0 md:pl-[4.5rem]">
@@ -48,7 +51,6 @@ export default async function Plan() {
                           ))}
                         </ol>
                         {p.status === "escalated" && <RequeueButton postId={p.id} />}
-                        {(p.status === "planned" || p.status === "carried_forward") && <SkipButton postId={p.id} className="-ml-1.5" />}
                       </div>
                     </details>
                   </li>
