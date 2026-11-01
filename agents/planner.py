@@ -24,9 +24,36 @@ PLAN_DAYS = 7
 CITE_RE = re.compile(r"\[learning:([A-Za-z0-9_-]{1,64})\]")
 # Run run_20261024_114318_baec64: the angle "crust that cracks like leather" was invented, and because the writer
 # and critic treated the planned post as fact, the claim passed the fact check. An angle now only names a focus.
-ANGLE_RULE = ("The angle names one thing the brief mentions to focus on (for example \"shaping the loaf\" or "
-              "\"the crust\"). It does not describe how anything looks, smells, tastes, feels or sounds, and makes "
-              "no claim the brief does not make.")
+ANGLE_RULE = ("The angle names one thing the brief mentions to focus on, using the brief's own words (for example "
+              "\"the crust\" or \"the smell of the oven\"). It does not describe how anything looks, smells, tastes, "
+              "feels or sounds, and makes no claim the brief does not make.")
+# Run run_20261101_121726_340650: the prompt alone did not hold. The angle "the crust cracking as it cools" was planned
+# anyway, and the critic rightly failed every draft that said so, because an angle is not a source of facts. So the
+# harness now checks it: every content word of an angle must appear in the brief's positive fields. The "dont" list
+# and banned phrases are left out, so "results" or "health" cannot ground an angle.
+ANGLE_STOPWORDS = frozenset(
+    "a an the and or of in on at to for with by from as is are be it its our your their this that these those "
+    "one each every how what when why who we you they".split())
+WORD_RE = re.compile(r"[a-z]+")
+
+
+def _stem(word: str) -> str:
+    """Crude on purpose: enough that "baking", "bakes" and "bake" match, without a stemming dependency."""
+    for suffix in ("ing", "es", "ed", "s"):
+        if word.endswith(suffix) and len(word) - len(suffix) >= 3:
+            word = word[: -len(suffix)]
+            break
+    return word.rstrip("es") if len(word) > 3 else word
+
+
+def brief_vocabulary(brief: BrandBrief) -> frozenset[str]:
+    text = " ".join([brief.name, brief.one_liner, brief.audience, brief.goal, *brief.do, *brief.voice])
+    return frozenset(_stem(w) for w in WORD_RE.findall(text.lower()))
+
+
+def ungrounded_words(angle: str, vocabulary: frozenset[str]) -> list[str]:
+    words = [w for w in WORD_RE.findall(angle.lower()) if len(w) > 1 and w not in ANGLE_STOPWORDS]  # drops the "s" of "beginner's"
+    return [w for w in words if _stem(w) not in vocabulary]
 
 
 class PlanRejected(LLMError):
@@ -60,9 +87,14 @@ def user_prompt(brief: BrandBrief, learnings: list[dict[str, Any]], today: date)
     ])
 
 
-def check_plan(plan: WeekPlan, today: date, learnings: list[dict[str, Any]]) -> list[str]:
+def check_plan(plan: WeekPlan, today: date, learnings: list[dict[str, Any]], brief: BrandBrief) -> list[str]:
     """Problems with a schema-valid plan, worded so they can be shown to the model."""
     problems = []
+    vocabulary = brief_vocabulary(brief)
+    for p in plan.posts:
+        if loose := ungrounded_words(p.angle, vocabulary):
+            problems.append(f"post {p.id!r} has the angle {p.angle!r}, but {', '.join(map(repr, loose))} is not in "
+                            "the brand brief; name a focus using the brief's own words")
     last = today + timedelta(days=PLAN_DAYS - 1)
     for p in plan.posts:
         if not today <= p.day <= last:
@@ -87,7 +119,7 @@ def plan_week(llm: LLM, run_id: str, brief: BrandBrief, learnings: list[dict[str
     for attempt in (1, 2):
         plan = llm.chat_json(run_id, ROLE, messages, WeekPlan, tools=tools.specs(), run_tool=tools,
                              overrides={"week_of": today}, budget=budget)
-        problems = check_plan(plan, today, learnings)
+        problems = check_plan(plan, today, learnings, brief)
         trace.log_event(run_id, "harness", "decision", f"check plan (attempt {attempt})",
                         "ok" if not problems else "; ".join(problems), ok=not problems)
         if not problems:
