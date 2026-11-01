@@ -70,7 +70,7 @@ export default async function Control() {
                     <span className="flex justify-end empty:hidden md:w-40 md:empty:flex">
                       {(p.status === "planned" || p.status === "carried_forward") && <SkipButton postId={p.id} />}
                     </span>
-                    <span className="flex justify-end md:w-28"><Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status.replace("_", " ")}</Badge></span>
+                    <span className="flex justify-end md:w-36"><Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status.replace("_", " ")}</Badge></span>
                   </li>
                 ))}
               </ul>
