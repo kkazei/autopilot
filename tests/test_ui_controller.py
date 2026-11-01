@@ -132,6 +132,18 @@ def test_a_crashed_run_is_reported_and_the_app_can_start_another():
     wait_for(ctl, done)
 
 
+def test_skip_waits_for_a_running_run():
+    release = threading.Event()
+    calls: list[str] = []
+    ctl = Controller(runner=lambda argv, input_fn, say: release.wait(5) and 0,
+                     skipper=lambda post_id, say: calls.append(post_id) or say(f"{post_id} skipped") or 0)
+    ctl.start(dry_run=True)
+    assert ctl.skip("post_1") == "A run is going. Skip after it finishes." and calls == []
+    release.set()
+    wait_for(ctl, done)
+    assert ctl.skip("post_1") == "post_1 skipped" and calls == ["post_1"]
+
+
 def test_requeue_waits_for_a_running_run():
     release = threading.Event()
     calls: list[str] = []

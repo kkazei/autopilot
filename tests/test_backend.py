@@ -55,7 +55,7 @@ def test_every_route_but_health_needs_the_secret():
     client = client_for(Controller(runner=lambda a, i, s: 0))
     assert client.get("/health").json() == {"ok": True}
     for method, path in [("get", "/status"), ("post", "/runs"), ("post", "/approvals/1"),
-                         ("post", "/posts/p/requeue")]:
+                         ("post", "/posts/p/requeue"), ("post", "/posts/p/skip")]:
         assert getattr(client, method)(path).status_code == 401
         assert getattr(client, method)(path, headers={backend.SECRET_HEADER: "s" * 39}).status_code == 401
     assert client.get("/docs").status_code == 404  # no public API docs on the Space
@@ -90,6 +90,7 @@ def test_a_second_run_and_a_stale_approval_are_refused():
     s = wait_status(client, lambda s: s["approval"] is not None)
     assert client.post("/runs", json={"kind": "next"}, headers=HEADERS).status_code == 409
     assert client.post("/posts/p/requeue", headers=HEADERS).status_code == 409
+    assert client.post("/posts/p/skip", headers=HEADERS).status_code == 409
     assert client.post(f"/approvals/{s['approval']['id'] + 1}", json={"choice": "approve"},
                        headers=HEADERS).status_code == 409
     assert client.post(f"/approvals/{s['approval']['id']}", json={"choice": "approve"},

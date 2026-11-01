@@ -1,4 +1,5 @@
 import { RequeueButton } from "@/components/requeue";
+import { SkipButton } from "@/components/skip";
 import { Badge, Card, Empty, PageHeader } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { planState } from "@/lib/db";
@@ -16,7 +17,7 @@ export default async function Plan() {
   const plans = [...state.plans].reverse();
   return (
     <>
-      <PageHeader title="Plan" sub="Each week's plan and what happened to every post. Escalated posts can go back in the queue." />
+      <PageHeader title="Plan" sub="Each week's plan and what happened to every post. Escalated posts can go back in the queue; waiting posts can be skipped." />
       {plans.length === 0 && <Card><p className="t-small text-fg-3">No plan yet. “Plan next week” on Control makes one.</p></Card>}
       {plans.map((plan) => {
         const posts = state.posts.filter((p) => p.plan_id === plan.plan_id);
@@ -47,6 +48,7 @@ export default async function Plan() {
                           ))}
                         </ol>
                         {p.status === "escalated" && <RequeueButton postId={p.id} />}
+                        {(p.status === "planned" || p.status === "carried_forward") && <SkipButton postId={p.id} className="-ml-1.5" />}
                       </div>
                     </details>
                   </li>

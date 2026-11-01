@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from harness.db_store import PostgresStore
 from harness.db_sync import Store, StoreBusy, SyncError, hosted_data_dir
-from ui.controller import Choice, Controller, Requeuer, Runner, _requeue, _run_outer, _run_post
+from ui.controller import Choice, Controller, Requeuer, Runner, _requeue, _run_outer, _run_post, _skip
 
 SECRET_ENV = "AUTOPILOT_BACKEND_SECRET"
 SECRET_HEADER = "X-Autopilot-Secret"
@@ -76,7 +76,8 @@ def hosted_requeuer(requeuer: Requeuer, store_factory: StoreFactory) -> Requeuer
 def hosted_controller(store_factory: StoreFactory = PostgresStore.from_env) -> Controller:
     return Controller(runner=hosted_runner(_run_outer, store_factory),
                       post_runner=hosted_runner(_run_post, store_factory),
-                      requeuer=hosted_requeuer(_requeue, store_factory))
+                      requeuer=hosted_requeuer(_requeue, store_factory),
+                      skipper=hosted_requeuer(_skip, store_factory))
 
 
 class RunRequest(BaseModel):
@@ -171,5 +172,11 @@ def create_app(controller: Controller | None = None, secret: str | None = None) 
         if ctl.busy():
             raise HTTPException(status_code=409, detail="A run is going. Requeue after it finishes.")
         return Message(message=ctl.requeue(post_id))
+
+    @app.post("/posts/{post_id}/skip", dependencies=auth)
+    def skip(post_id: str) -> Message:
+        if ctl.busy():
+            raise HTTPException(status_code=409, detail="A run is going. Skip after it finishes.")
+        return Message(message=ctl.skip(post_id))
 
     return app

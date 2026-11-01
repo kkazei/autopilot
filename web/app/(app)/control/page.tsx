@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ApprovalCard, LatestRun, MeasureButton, RunButtons, TopicForm } from "@/components/control";
 import { LiveQuota } from "@/components/live-quota";
+import { SkipButton } from "@/components/skip";
 import { CountUp, Reveal } from "@/components/motion";
 import { Time } from "@/components/time";
 import { Badge, Card, Dot, Empty, PageHeader, Stat } from "@/components/ui";
@@ -66,7 +67,10 @@ export default async function Control() {
                       <span className="t-small hidden truncate text-fg-2 sm:block">{p.angle}</span>
                     </span>
                     <span className="t-mono-sm hidden w-24 text-fg-2 md:block">{p.goal}</span>
-                    <span className="flex w-28 justify-end"><Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status.replace("_", " ")}</Badge></span>
+                    <span className="flex justify-end empty:hidden md:w-40 md:empty:flex">
+                      {(p.status === "planned" || p.status === "carried_forward") && <SkipButton postId={p.id} />}
+                    </span>
+                    <span className="flex justify-end md:w-28"><Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status.replace("_", " ")}</Badge></span>
                   </li>
                 ))}
               </ul>

@@ -4,11 +4,14 @@
     python -m scripts.run_outer
     python -m scripts.run_outer --measure-only
     python -m scripts.run_outer --requeue post_1a2b3c4d
+    python -m scripts.run_outer --skip post_1a2b3c4d
     python -m scripts.run_outer --plan-only
 
 Human approval is on by default; --no-approve is refused unless --dry-run is also set, exactly like run_post.
 A dry run reads the real plan state and learnings but writes neither, and makes no Bluesky reads or analyst calls.
 --plan-only plans next week now, and only when no post is waiting; it never measures, writes or publishes.
+--skip drops a post that has not run yet, for good (blocked); with --requeue it is the only way a person changes a
+post's status, and neither calls a model.
 
 Exit codes: 0 done (including "nothing to do yet"), 2 refused by flags or config, 3 escalated, 4 failed,
 5 blocked by guardrails, 6 another run is active.
@@ -30,7 +33,7 @@ from harness.hermes_llm import with_runtime
 from harness.llm import LLM, LLMError, OpenRouterLLM
 from harness.publish import Clock, utc_now
 from harness.schemas import BrandBrief
-from loops.outer import EXIT_REFUSED, OuterOptions, plan_now, requeue_post, run_outer
+from loops.outer import EXIT_REFUSED, OuterOptions, plan_now, requeue_post, run_outer, skip_post
 
 DEFAULT_ENV_FILE = trace.REPO_ROOT / ".env"
 
@@ -43,6 +46,7 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--measure-only", action="store_true", help="learn from published posts, then stop")
     p.add_argument("--min-score", type=int, choices=range(1, 6), default=4, metavar="1-5")
     p.add_argument("--requeue", metavar="POST_ID", help="put an escalated post back in the queue (no model calls)")
+    p.add_argument("--skip", metavar="POST_ID", help="drop a planned or carried-forward post for good (no model calls)")
     p.add_argument("--plan-only", action="store_true", help="plan next week now; refused while any post is waiting")
     return p.parse_args(argv)
 
@@ -61,8 +65,11 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
     if not args.approve and not args.dry_run:
         say("refused: --no-approve is only allowed together with --dry-run")
         return EXIT_REFUSED
-    if args.plan_only and (args.measure_only or args.requeue):
-        say("refused: --plan-only cannot be combined with --measure-only or --requeue")
+    if args.plan_only and (args.measure_only or args.requeue or args.skip):
+        say("refused: --plan-only cannot be combined with --measure-only, --requeue or --skip")
+        return EXIT_REFUSED
+    if args.skip and (args.requeue or args.measure_only or args.dry_run):
+        say("refused: --skip cannot be combined with --requeue, --measure-only or --dry-run")
         return EXIT_REFUSED
     if env_file is not None:
         load_dotenv(env_file)
@@ -70,6 +77,8 @@ def main(argv: Sequence[str] | None = None, *, llm: LLM | None = None,
         clock = (lambda: now) if now is not None else utc_now
     if args.requeue:
         return requeue_post(args.requeue, say, clock)
+    if args.skip:
+        return skip_post(args.skip, say, clock)
     try:
         brief = BrandBrief.model_validate_json((trace.data_dir() / "brand_brief.json").read_text(encoding="utf-8"))
     except OSError as e:
