@@ -46,14 +46,30 @@ def _stem(word: str) -> str:
     return word.rstrip("es") if len(word) > 3 else word
 
 
+MIN_PART_LEN = 4  # "dough" inside "sourdough" counts; "on" inside "one" does not
+
+
 def brief_vocabulary(brief: BrandBrief) -> frozenset[str]:
     text = " ".join([brief.name, brief.one_liner, brief.audience, brief.goal, *brief.do, *brief.voice])
     return frozenset(_stem(w) for w in WORD_RE.findall(text.lower()))
 
 
+def _grounded(word: str, vocabulary: frozenset[str]) -> bool:
+    """A word of the brief, or the end of a longer one: run_20261101_124736_a2bae1 rejected "dough" at a sourdough
+    bakery. Only the end, so a compound's head ("sourdough" grounds "dough", not "sour") is what counts."""
+    stem = _stem(word)
+    return stem in vocabulary or (len(word) >= MIN_PART_LEN and any(v.endswith(stem) and v != stem for v in vocabulary))
+
+
 def ungrounded_words(angle: str, vocabulary: frozenset[str]) -> list[str]:
     words = [w for w in WORD_RE.findall(angle.lower()) if len(w) > 1 and w not in ANGLE_STOPWORDS]  # drops the "s" of "beginner's"
-    return [w for w in words if _stem(w) not in vocabulary]
+    return [w for w in words if not _grounded(w, vocabulary)]
+
+
+# Run run_20261101_124736_a2bae1: told only what was wrong, the model fixed every angle but rewrote the rationale
+# as an account of its fixes, which dropped the learning citations, so the corrected plan failed the other rule.
+RETRY_NOTE = ("Change only what is listed above and keep everything else as it was, including the "
+              "[learning:<post_id>] citations in the rationale. Reply with only the corrected JSON object.")
 
 
 class PlanRejected(LLMError):
@@ -125,6 +141,5 @@ def plan_week(llm: LLM, run_id: str, brief: BrandBrief, learnings: list[dict[str
         if not problems:
             return plan
         messages = [*messages, {"role": "assistant", "content": plan.model_dump_json()},
-                    {"role": "user", "content": "That plan was rejected: " + "; ".join(problems)
-                     + ". Reply with only the corrected JSON object."}]
+                    {"role": "user", "content": "That plan was rejected: " + "; ".join(problems) + ". " + RETRY_NOTE}]
     raise PlanRejected("plan rejected after one retry: " + "; ".join(problems))
