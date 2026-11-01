@@ -41,6 +41,12 @@ BACKOFF_BASE_S = 2.0
 BACKOFF_CAP_S = 30.0
 DEFAULT_MAX_TOKENS = 4096  # free models still cost $0; reasoning models used ~990 of 1,024 thinking (run_..._d8f068)
 
+# Models a role tries last instead of in chain order. One chain still lives in OPENROUTER_MODELS; this only moves a
+# model back for a role it is bad at, and an id that is not in the chain changes nothing. north-mini-code is the
+# calibrated critic, but as the writer it ran to max_tokens on both revisions of run_20261101_121726_340650
+# (about 42 s and one budget slot each) while nemotron-3.5-super-vl answered in about 20 s.
+ROLE_LAST: dict[str, frozenset[str]] = {"writer": frozenset({"cohere/north-mini-code:free"})}
+
 FATAL_STATUSES = frozenset({401, 402, 403})
 _FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
 
@@ -364,6 +370,11 @@ class OpenRouterLLM(LLM):
     def __repr__(self) -> str:
         return f"OpenRouterLLM(models={self.models!r})"  # never the key
 
+    def order_for(self, agent: Agent) -> list[str]:
+        """The chain in env order, with the role's ROLE_LAST models moved to the end so they remain a fallback."""
+        last = ROLE_LAST.get(agent, frozenset())
+        return [m for m in self.models if m not in last] + [m for m in self.models if m in last]
+
     def backoff_s(self, attempt: int) -> float:
         """Exponential with full-range jitter, so parallel runs hitting one shared pool do not retry in lockstep."""
         return min(BACKOFF_CAP_S, BACKOFF_BASE_S * 2 ** (attempt - 1)) * (0.5 + self._jitter())
@@ -373,7 +384,8 @@ class OpenRouterLLM(LLM):
              budget: Budget | None = None) -> LLMResponse:
         summary_in = json.dumps({"messages": messages, "tools": [t["function"]["name"] for t in tools or []]},
                                 ensure_ascii=False)
-        for index, model in enumerate(self.models):
+        models = self.order_for(agent)
+        for index, model in enumerate(models):
             if model in self._dead:
                 continue
             for attempt in range(1, self.max_tries + 1):
@@ -408,7 +420,7 @@ class OpenRouterLLM(LLM):
                     self._sleep(delay)
                     continue
                 break
-            next_model = next((m for m in self.models[index + 1:] if m not in self._dead), None)
+            next_model = next((m for m in models[index + 1:] if m not in self._dead), None)
             trace.log_event(run_id, agent, "decision", f"{model} gave up",
                             f"fallback to {next_model}" if next_model else "no models left", ok=False, model=model)
         raise LLMUnavailable(f"all {len(self.models)} models failed")

@@ -403,6 +403,25 @@ def test_a_client_temperature_of_zero_is_sent_on_every_attempt_including_fallbac
     assert all(r["payload"]["temperature"] == 0.0 for r in transport.requests)  # 0 is sent, not treated as "unset"
 
 
+def test_a_role_tries_its_demoted_models_last_and_other_roles_keep_the_chain_order(run_id, monkeypatch):
+    """Run run_20261101_121726_340650: north-mini-code, the calibrated critic, ran to max_tokens as the writer."""
+    monkeypatch.setitem(llm.ROLE_LAST, "writer", frozenset({"a/one:free", "not/in-chain:free"}))
+    client, transport, _ = chain((200, GOOD), (200, GOOD))
+    assert client.order_for("writer") == ["b/two:free", "c/three:free", "a/one:free"]
+    client.chat(run_id, "writer", MSGS)
+    client.chat(run_id, "critic", MSGS)
+    assert transport.models == ["b/two:free", "a/one:free"]
+
+
+def test_a_demoted_model_is_still_the_writer_s_last_fallback(run_id, monkeypatch):
+    monkeypatch.setitem(llm.ROLE_LAST, "writer", frozenset({"a/one:free"}))
+    client, transport, _ = chain((404, "gone"), (404, "gone"), (200, GOOD))
+    client.chat(run_id, "writer", MSGS)
+    assert transport.models == ["b/two:free", "c/three:free", "a/one:free"]
+    fallbacks = [e.summary_out for e in trace.read_run(run_id) if e.summary_out.startswith("fallback to")]
+    assert fallbacks == ["fallback to c/three:free", "fallback to a/one:free"]
+
+
 def test_models_from_env_parses_and_refuses_paid_ids():
     assert llm.models_from_env({llm.MODELS_ENV: " a/one:free, b/two:free ,"}) == ["a/one:free", "b/two:free"]
     with pytest.raises(llm.LLMConfigError, match="non-free"):

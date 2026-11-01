@@ -24,8 +24,9 @@ def scores(n: int = 5) -> str:
     return json.dumps({"voice": n, "clarity": n, "cta": n, "policy_risk": n, "reasons": REASONS})
 
 
-def week_json(days: tuple[str, ...] = ("2026-10-23", "2026-10-25", "2026-10-27"), rationale: str = "A steady week.") -> str:
-    posts = [{"id": f"p{i}", "day": d, "topic": f"Topic {i}", "angle": f"Angle {i}", "goal": "click"}
+def week_json(days: tuple[str, ...] = ("2026-10-23", "2026-10-25", "2026-10-27"), rationale: str = "A steady week.",
+              angle: str = "the crust") -> str:
+    posts = [{"id": f"p{i}", "day": d, "topic": f"Topic {i}", "angle": angle, "goal": "click"}
              for i, d in enumerate(days, 1)]
     return json.dumps({"posts": posts, "rationale": rationale})
 
