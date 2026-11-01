@@ -122,6 +122,30 @@ def test_near_miss_citation_forms_count(run_id, brief, cite):
     assert planner.plan_week(llm, run_id, brief, LEARNING, TODAY) and len(llm.calls) == 1
 
 
+def test_a_bare_post_id_counts_as_a_citation(run_id, brief):
+    """Run run_20261101_130846_97517e: every learning was used by id, with no brackets at all."""
+    llm = MockLLM([week_json(rationale="post_aaaa1111 shows replies matter, so p2 asks a question.")])
+    assert planner.plan_week(llm, run_id, brief, LEARNING, TODAY) and len(llm.calls) == 1
+
+
+@pytest.mark.parametrize("text", ["post_aaaa11112 is longer", "xpost_aaaa1111", "post_aaaa1111-b", "no id here"])
+def test_only_a_whole_valid_id_counts(text):
+    assert planner.cited_ids(text, {"post_aaaa1111"}) == set()
+
+
+def test_the_planner_asks_for_room_to_think(run_id, brief):
+    """Two reasoning models ran out at 4,096 tokens while planning (Nov 1); a plan itself is ~1,000."""
+    seen: list[int] = []
+
+    class Recording(MockLLM):
+        def chat(self, *args, max_tokens=0, **kwargs):
+            seen.append(max_tokens)
+            return super().chat(*args, max_tokens=max_tokens, **kwargs)
+
+    planner.plan_week(Recording([week_json()]), run_id, brief, [], TODAY)
+    assert seen == [planner.PLANNER_MAX_TOKENS] == [8192]
+
+
 def test_a_near_miss_form_still_needs_a_real_learning(run_id, brief):
     bad = week_json(rationale="Learning[post_ffffffff] says so.")
     llm = MockLLM([bad, bad])

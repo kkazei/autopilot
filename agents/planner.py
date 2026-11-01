@@ -2,7 +2,7 @@
 
 The model's post ids are placeholders (the harness replaces them), and week_of is set by the harness. The harness
 then checks two things the schema cannot: every post falls in the next seven days, and, when learnings exist,
-the rationale cites at least one of them as [learning:<post_id>]. A citation only proves the model named a real
+the rationale names at least one of them by post id (asked for as [learning:<post_id>]). A citation only proves the model named a real
 learning, not that the plan used it; that stays a judgement for a human reading the trace.
 One retry explains what was wrong. It shares the planner's attempt budget, so a stubborn model cannot loop.
 """
@@ -21,14 +21,17 @@ from harness.schemas import BrandBrief, WeekPlan
 
 ROLE = "planner"
 PLAN_DAYS = 7
-# The asked-for form is [learning:<post_id>]. Run run_20261101_130140_1033cd: two models in a row wrote
-# "Learning[post_fa922d48]" for a learning they had really used, so the near-miss forms count too. Only the
-# punctuation is relaxed: the id must still be a learning with signal (check_plan).
-CITE_RE = re.compile(r"\[learning:\s*([A-Za-z0-9_-]{1,64})\]|\blearning\[([A-Za-z0-9_-]{1,64})\]", re.IGNORECASE)
+PLANNER_MAX_TOKENS = 8192  # a plan is ~1,000 tokens; two reasoning models ran out at 4,096 while thinking (Nov 1)
 
 
-def cited_ids(text: str) -> set[str]:
-    return {a or b for a, b in CITE_RE.findall(text)}
+def cited_ids(text: str, valid: set[str]) -> set[str]:
+    """The valid ids that stand alone in the text, whatever punctuation is around them. The prompt asks for
+    [learning:<post_id>], but three plans on Nov 1 used real learnings and wrote them three other ways, last as a
+    bare "post_365bd515 shows..." (run_20261101_130846_97517e). The check exists to prove the plan names a real
+    learning, and a post id is random, so the id itself is the proof."""
+    return {v for v in valid if re.search(rf"(?<![A-Za-z0-9_-]){re.escape(v)}(?![A-Za-z0-9_-])", text)}
+
+
 # Run run_20261024_114318_baec64: the angle "crust that cracks like leather" was invented, and because the writer
 # and critic treated the planned post as fact, the claim passed the fact check. An angle now only names a focus.
 ANGLE_RULE = ("The angle names one thing the brief mentions to focus on, using the brief's own words (for example "
@@ -125,7 +128,7 @@ def check_plan(plan: WeekPlan, today: date, learnings: list[dict[str, Any]], bri
     # Only a learning with signal can be cited: while every learning is "not enough data" (a young account),
     # demanding a citation would make the planner cite noise, or burn its one retry and fail the plan.
     valid = {str(r["post_id"]) for r in learnings if r.get("insight") != NOT_ENOUGH_DATA_INSIGHT}
-    if valid and not valid & cited_ids(plan.rationale):
+    if valid and not cited_ids(plan.rationale, valid):
         example = sorted(valid)[0]
         problems.append("the rationale must cite at least one learning as [learning:<post_id>] using a post_id "
                         f"from the learnings (valid ids: {', '.join(sorted(valid))}); write it exactly like "
@@ -143,7 +146,7 @@ def plan_week(llm: LLM, run_id: str, brief: BrandBrief, learnings: list[dict[str
     problems: list[str] = []
     for attempt in (1, 2):
         plan = llm.chat_json(run_id, ROLE, messages, WeekPlan, tools=tools.specs(), run_tool=tools,
-                             overrides={"week_of": today}, budget=budget)
+                             overrides={"week_of": today}, budget=budget, max_tokens=PLANNER_MAX_TOKENS)
         problems = check_plan(plan, today, learnings, brief)
         trace.log_event(run_id, "harness", "decision", f"check plan (attempt {attempt})",
                         "ok" if not problems else "; ".join(problems), ok=not problems)
