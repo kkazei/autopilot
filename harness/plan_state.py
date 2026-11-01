@@ -189,3 +189,17 @@ def requeue(state: PlanState, post_id: str, run_id: str, now: datetime) -> PostR
         raise PlanStateError(f"{post_id} is {post.status}; only escalated posts can be requeued")
     post.runs_failed = 0
     return mark(state, post_id, "carried_forward", run_id, now, "requeued by a person")
+
+
+def skip(state: PlanState, post_id: str, run_id: str, now: datetime) -> PostRecord:
+    """A person drops a post before it runs, e.g. an angle the critic can never pass (run_20261101_121726_340650).
+
+    Blocked, like a declined draft, so it is final and requeue cannot bring it back: a skip is a decision about the
+    post itself, and a waiting post that could not be dropped also kept "plan now" from running.
+    """
+    post = state.post(post_id)
+    if post is None:
+        raise PlanStateError(f"unknown post {post_id}")
+    if post.status not in ACTIVE:
+        raise PlanStateError(f"{post_id} is {post.status}; only planned or carried-forward posts can be skipped")
+    return mark(state, post_id, "blocked", run_id, now, "skipped by a person")

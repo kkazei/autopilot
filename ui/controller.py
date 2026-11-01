@@ -30,7 +30,7 @@ _REPLIES = {"approve": "Approved.", "reject": "Rejected: this post is blocked fo
             "not_now": "Not now: the post is carried forward to the next run."}
 
 Runner = Callable[[list[str], Callable[[str], str], Callable[[str], None]], int]
-Requeuer = Callable[[str, Callable[[str], None]], int]
+Requeuer = Callable[[str, Callable[[str], None]], int]  # also the shape of a skip: a post id in, no model calls
 
 
 def _run_outer(argv: list[str], input_fn: Callable[[str], str], say: Callable[[str], None]) -> int:
@@ -49,6 +49,12 @@ def _requeue(post_id: str, say: Callable[[str], None]) -> int:
     from scripts import run_outer
 
     return run_outer.main(["--requeue", post_id], say=say)
+
+
+def _skip(post_id: str, say: Callable[[str], None]) -> int:
+    from scripts import run_outer
+
+    return run_outer.main(["--skip", post_id], say=say)
 
 
 @dataclass(frozen=True)
@@ -70,10 +76,12 @@ class Snapshot:
 
 class Controller:
     def __init__(self, runner: Runner = _run_outer, requeuer: Requeuer = _requeue, post_runner: Runner = _run_post,
-                 approval_timeout_s: float = APPROVAL_TIMEOUT_S, log_limit: int = LOG_LIMIT) -> None:
+                 approval_timeout_s: float = APPROVAL_TIMEOUT_S, log_limit: int = LOG_LIMIT,
+                 skipper: Requeuer = _skip) -> None:
         self._runner = runner
         self._post_runner = post_runner
         self._requeuer = requeuer
+        self._skipper = skipper
         self._timeout_s = approval_timeout_s
         self._mutex = threading.Lock()
         self._log: deque[str] = deque(maxlen=log_limit)
@@ -179,10 +187,17 @@ class Controller:
                             approval=self._approval, exit_code=self._exit_code)
 
     def requeue(self, post_id: str) -> str:
+        return self._post_change(self._requeuer, post_id, "Requeue")
+
+    def skip(self, post_id: str) -> str:
+        return self._post_change(self._skipper, post_id, "Skip")
+
+    def _post_change(self, change: Requeuer, post_id: str, verb: str) -> str:
+        """Refused while a run is going: the run holds the plan state, and could be working on this very post."""
         if self.busy():
-            return "A run is going. Requeue after it finishes."
+            return f"A run is going. {verb} after it finishes."
         lines: list[str] = []
-        self._requeuer(post_id, lambda m: lines.append(trace.redact(m)))
+        change(post_id, lambda m: lines.append(trace.redact(m)))
         return "\n".join(lines)
 
     def shutdown(self, wait_s: float = 120.0) -> None:

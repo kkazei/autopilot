@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 type Action =
   | { action: "run"; kind: "next" | "topic" | "plan" | "measure"; dry_run?: boolean; topic?: string; angle?: string; goal?: string }
   | { action: "answer"; approval_id: number; choice: "approve" | "not_now" | "reject" }
-  | { action: "requeue"; post_id: string };
+  | { action: "requeue" | "skip"; post_id: string };
 
 const POST_ID = /^post_[a-f0-9]{8}$/;
 
@@ -31,8 +31,8 @@ export async function POST(req: Request) {
   } else if (a.action === "answer" && Number.isInteger(a.approval_id) && ["approve", "not_now", "reject"].includes(a.choice)) {
     path = `/approvals/${a.approval_id}`;
     body = { choice: a.choice };
-  } else if (a.action === "requeue" && POST_ID.test(a.post_id)) {
-    path = `/posts/${a.post_id}/requeue`;
+  } else if ((a.action === "requeue" || a.action === "skip") && POST_ID.test(a.post_id)) {
+    path = `/posts/${a.post_id}/${a.action}`;
   } else {
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   }

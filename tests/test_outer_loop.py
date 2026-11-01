@@ -165,6 +165,44 @@ def test_escalation_is_terminal_until_a_person_requeues_it(data, bsky):  # noqa:
     assert go(["--requeue", post_id], [])[0] == 2  # no longer escalated
 
 
+def test_a_person_can_skip_a_waiting_post_for_good_without_a_model_call(data, bsky):  # noqa: F811
+    """Run run_20261101_121726_340650: a planned angle the critic could never pass had no way out of the queue,
+    and while it waited, plan now was refused."""
+    assert go(["--plan-only"], PLAN_SCRIPT)[0] == 0
+    first = state().posts[0].id
+    code, llm, _ = go(["--skip", first], [])
+    assert code == 0 and llm.calls == [] and bsky == []
+    post = state().post(first)
+    assert post.status == "blocked" and post.history[-1].reason == "skipped by a person"
+    assert go(["--skip", first], [])[0] == 2  # already blocked
+    assert go(["--requeue", first], [])[0] == 2  # final: requeue is only for escalated posts
+    assert go(["--plan-only"], [])[0] == 2  # the other two still wait
+    for p in state().posts[1:]:
+        assert go(["--skip", p.id], [])[0] == 0
+    code, llm, _ = go(["--plan-only"], PLAN_SCRIPT)
+    assert code == 0 and len(llm.calls) == 1 and len(state().posts) == 6
+
+
+def test_skip_settles_first_so_a_live_post_cannot_be_skipped(data, bsky):  # noqa: F811
+    assert go([], PLAN_SCRIPT + POST_SCRIPT)[0] == 0
+    s = state()
+    s.posts[0].status = "planned"  # a published post whose status write was lost
+    plan_state.save_state(s)
+    assert go(["--skip", s.posts[0].id], [])[0] == 2  # settled as published in memory, so refused
+    assert state().posts[0].status != "blocked"
+
+
+def test_skip_refuses_an_unknown_post(data):  # noqa: F811
+    assert go(["--plan-only"], PLAN_SCRIPT)[0] == 0
+    assert go(["--skip", "post_ffffffff"], [])[0] == 2
+
+
+@pytest.mark.parametrize("extra", [["--dry-run"], ["--measure-only"], ["--requeue", "post_y"], ["--plan-only"]])
+def test_skip_does_not_combine_with_other_modes(data, extra):  # noqa: F811
+    code, llm, _ = go(["--skip", "post_x", *extra], [])
+    assert code == 2 and llm.calls == []
+
+
 def test_a_human_who_declines_blocks_the_post_for_good(data, bsky):  # noqa: F811
     code, _, _ = go([], PLAN_SCRIPT + POST_SCRIPT, answers=("n",))
     assert code == 5 and statuses()[0] == "blocked" and bsky == []

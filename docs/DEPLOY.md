@@ -52,7 +52,9 @@ nothing to the repository.
 - Free services sleep after 15 idle minutes. The web app pings `/health` (no secret) to wake it and disables its run
   buttons until it answers, about a minute. While a run or an approval is open, the app's status polling keeps it awake.
 - Every route except `/health` needs the `X-Autopilot-Secret` header. The run kinds are fixed in `backend/app.py`
-  (`next`, `topic`, `plan`, `measure`); approval cannot be switched off from outside.
+  (`next`, `topic`, `plan`, `measure`); approval cannot be switched off from outside. Two post routes change one
+  post's status without a model call: `/posts/{id}/requeue` (an escalated post back in the queue) and
+  `/posts/{id}/skip` (a planned or carried-forward post blocked for good).
 - A pending approval that gets no answer within 15 minutes, or a backend restart, counts as "not now": the post is
   carried forward and the lock is released.
 

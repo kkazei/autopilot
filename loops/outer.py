@@ -86,20 +86,36 @@ def _acquire(stack: contextlib.ExitStack, say: Callable[[str], None]) -> bool:
 
 def requeue_post(post_id: str, say: Callable[[str], None] = print, clock: Clock = utc_now) -> int:
     """A person puts an escalated post back in the queue. No model calls."""
+    return _by_person("requeue", post_id, plan_state.requeue, f"{post_id} is queued again (carried_forward)", say,
+                      clock)
+
+
+def skip_post(post_id: str, say: Callable[[str], None] = print, clock: Clock = utc_now) -> int:
+    """A person drops a planned or carried-forward post for good. No model calls."""
+    return _by_person("skip", post_id, plan_state.skip, f"{post_id} is skipped (blocked)", say, clock, settle=True)
+
+
+def _by_person(action: str, post_id: str, change: Callable[[PlanState, str, str, datetime], PostRecord], done: str,
+               say: Callable[[str], None], clock: Clock, *, settle: bool = False) -> int:
+    """One status change a person asked for, under the outer lock and in the trace. With settle, posts that
+    approved.jsonl already holds are settled first, so a live post whose status was never saved cannot be skipped."""
     with contextlib.ExitStack() as stack:
         if not _acquire(stack, say):
             return EXIT_BUSY
         run_id = trace.start_run()
+        now = clock()
         try:
             state = plan_state.load_state()
-            plan_state.requeue(state, post_id, run_id, clock())
+            if settle:
+                plan_state.reconcile(state, live_records(), run_id, now)
+            post = change(state, post_id, run_id, now)
             plan_state.save_state(state)
-        except (PlanStateError, OSError, LockTimeout) as e:
-            trace.log_event(run_id, "harness", "decision", f"requeue {post_id}", f"refused: {e}", ok=False)
+        except (PlanStateError, ApprovedLogError, OSError, LockTimeout) as e:
+            trace.log_event(run_id, "harness", "decision", f"{action} {post_id}", f"refused: {e}", ok=False)
             say(f"refused: {e}")
             return EXIT_REFUSED
-        trace.log_event(run_id, "harness", "decision", f"requeue {post_id}", "carried_forward", ok=True)
-        say(f"{post_id} is queued again (carried_forward)")
+        trace.log_event(run_id, "harness", "decision", f"{action} {post_id}", post.status, ok=True)
+        say(done)
         return EXIT_OK
 
 
