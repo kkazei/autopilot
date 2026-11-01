@@ -422,6 +422,13 @@ def test_a_demoted_model_is_still_the_writer_s_last_fallback(run_id, monkeypatch
     assert fallbacks == ["fallback to c/three:free", "fallback to a/one:free"]
 
 
+def test_north_is_tried_last_by_the_writer_and_planner_but_stays_the_first_critic():
+    """It ran to max_tokens on writer revisions and a planner retry; it is the calibrated critic."""
+    client, _, _ = chain(models=["cohere/north-mini-code:free", "b/two:free"])
+    assert client.order_for("writer") == client.order_for("planner") == ["b/two:free", "cohere/north-mini-code:free"]
+    assert client.order_for("critic") == client.order_for("analyst") == ["cohere/north-mini-code:free", "b/two:free"]
+
+
 def test_models_from_env_parses_and_refuses_paid_ids():
     assert llm.models_from_env({llm.MODELS_ENV: " a/one:free, b/two:free ,"}) == ["a/one:free", "b/two:free"]
     with pytest.raises(llm.LLMConfigError, match="non-free"):

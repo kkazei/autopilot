@@ -21,7 +21,14 @@ from harness.schemas import BrandBrief, WeekPlan
 
 ROLE = "planner"
 PLAN_DAYS = 7
-CITE_RE = re.compile(r"\[learning:([A-Za-z0-9_-]{1,64})\]")
+# The asked-for form is [learning:<post_id>]. Run run_20261101_130140_1033cd: two models in a row wrote
+# "Learning[post_fa922d48]" for a learning they had really used, so the near-miss forms count too. Only the
+# punctuation is relaxed: the id must still be a learning with signal (check_plan).
+CITE_RE = re.compile(r"\[learning:\s*([A-Za-z0-9_-]{1,64})\]|\blearning\[([A-Za-z0-9_-]{1,64})\]", re.IGNORECASE)
+
+
+def cited_ids(text: str) -> set[str]:
+    return {a or b for a, b in CITE_RE.findall(text)}
 # Run run_20261024_114318_baec64: the angle "crust that cracks like leather" was invented, and because the writer
 # and critic treated the planned post as fact, the claim passed the fact check. An angle now only names a focus.
 ANGLE_RULE = ("The angle names one thing the brief mentions to focus on, using the brief's own words (for example "
@@ -118,9 +125,11 @@ def check_plan(plan: WeekPlan, today: date, learnings: list[dict[str, Any]], bri
     # Only a learning with signal can be cited: while every learning is "not enough data" (a young account),
     # demanding a citation would make the planner cite noise, or burn its one retry and fail the plan.
     valid = {str(r["post_id"]) for r in learnings if r.get("insight") != NOT_ENOUGH_DATA_INSIGHT}
-    if valid and not valid & set(CITE_RE.findall(plan.rationale)):
+    if valid and not valid & cited_ids(plan.rationale):
+        example = sorted(valid)[0]
         problems.append("the rationale must cite at least one learning as [learning:<post_id>] using a post_id "
-                        f"from the learnings (valid ids: {', '.join(sorted(valid))})")
+                        f"from the learnings (valid ids: {', '.join(sorted(valid))}); write it exactly like "
+                        f"[learning:{example}], with the square brackets around the whole citation")
     return problems
 
 

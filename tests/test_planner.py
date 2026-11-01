@@ -114,6 +114,22 @@ def test_a_learning_must_be_cited_when_learnings_exist(run_id, brief):
     assert "[learning:post_aaaa1111]" in plan.rationale and len(llm.calls) == 2
 
 
+@pytest.mark.parametrize("cite", ["Learning[post_aaaa1111] says replies matter.", "See [learning: post_aaaa1111].",
+                                  "See [Learning:post_aaaa1111]."])
+def test_near_miss_citation_forms_count(run_id, brief, cite):
+    """Run run_20261101_130140_1033cd: two models wrote "Learning[post_fa922d48]" for a learning they had used."""
+    llm = MockLLM([week_json(rationale=cite)])
+    assert planner.plan_week(llm, run_id, brief, LEARNING, TODAY) and len(llm.calls) == 1
+
+
+def test_a_near_miss_form_still_needs_a_real_learning(run_id, brief):
+    bad = week_json(rationale="Learning[post_ffffffff] says so.")
+    llm = MockLLM([bad, bad])
+    with pytest.raises(planner.PlanRejected):
+        planner.plan_week(llm, run_id, brief, LEARNING, TODAY)
+    assert "write it exactly like [learning:post_aaaa1111]" in llm.calls[1][-1]["content"]
+
+
 def test_citing_an_id_that_is_not_a_saved_learning_does_not_count(run_id, brief):
     bad = week_json(rationale="See [learning:post_ffffffff].")
     llm = MockLLM([bad, bad])

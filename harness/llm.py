@@ -44,8 +44,10 @@ DEFAULT_MAX_TOKENS = 4096  # free models still cost $0; reasoning models used ~9
 # Models a role tries last instead of in chain order. One chain still lives in OPENROUTER_MODELS; this only moves a
 # model back for a role it is bad at, and an id that is not in the chain changes nothing. north-mini-code is the
 # calibrated critic, but as the writer it ran to max_tokens on both revisions of run_20261101_121726_340650
-# (about 42 s and one budget slot each) while nemotron-3.5-super-vl answered in about 20 s.
-ROLE_LAST: dict[str, frozenset[str]] = {"writer": frozenset({"cohere/north-mini-code:free"})}
+# (about 42 s and one budget slot each) while nemotron-3.5-super-vl answered in about 20 s. As the planner it did the
+# same on its retry in run_20261101_130140_1033cd (57 s), and nemotron answered in 6 s. It stays the first critic.
+_NORTH = frozenset({"cohere/north-mini-code:free"})
+ROLE_LAST: dict[str, frozenset[str]] = {"writer": _NORTH, "planner": _NORTH}
 
 FATAL_STATUSES = frozenset({401, 402, 403})
 _FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
