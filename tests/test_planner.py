@@ -52,7 +52,8 @@ def test_the_planner_is_told_an_angle_names_a_focus_and_describes_nothing(brief)
 
 def test_an_angle_in_the_brief_s_own_words_passes(brief):
     vocabulary = planner.brief_vocabulary(brief)
-    for angle in ("the crust", "the smell of the oven", "flour on your hands", "a beginner's mistakes", "weekend classes"):
+    for angle in ("the crust", "the smell of the oven", "flour on your hands", "a beginner's mistakes", "weekend classes",
+                  "shaping the loaf", "kneading", "the dough"):  # "dough" is the end of "sourdough"
         assert planner.ungrounded_words(angle, vocabulary) == [], angle
 
 
@@ -63,6 +64,8 @@ def test_an_angle_that_describes_or_invents_is_not_grounded(brief):
     assert planner.ungrounded_words("the crust cracking as it cools", vocabulary) == ["cracking", "cools"]
     assert planner.ungrounded_words("the shared bench space in class", vocabulary) == ["shared", "bench", "space"]
     assert planner.ungrounded_words("guaranteed results", vocabulary) == ["guaranteed", "results"]
+    assert planner.ungrounded_words("a sour tang", vocabulary) == ["sour", "tang"]  # a compound's head is not grounded
+    assert planner.ungrounded_words("watching dough pull away", vocabulary) == ["watching", "pull", "away"]
 
 
 def test_an_ungrounded_angle_gets_one_retry_that_names_the_words(run_id, brief):
@@ -71,6 +74,16 @@ def test_an_ungrounded_angle_gets_one_retry_that_names_the_words(run_id, brief):
     assert len(llm.calls) == 2 and all(p.angle == "the crust" for p in plan.posts)
     retry = llm.calls[1][-1]["content"]
     assert "'cracking', 'cools' is not in the brand brief" in retry and "rejected" in retry
+
+
+def test_the_retry_asks_to_keep_the_learning_citations(run_id, brief):
+    """Run run_20261101_124736_a2bae1: the retry fixed every angle and dropped the citations with the old rationale."""
+    cited = "Replies matter [learning:post_aaaa1111]."
+    llm = MockLLM([week_json(rationale=cited, angle="aromatic flour blends"), week_json(rationale=cited)])
+    planner.plan_week(llm, run_id, brief, LEARNING, TODAY)
+    retry = llm.calls[1][-1]["content"]
+    assert "'aromatic', 'blends'" in retry and planner.RETRY_NOTE in retry
+    assert "keep everything else as it was, including the [learning:<post_id>] citations" in retry
 
 
 def test_two_plans_with_ungrounded_angles_fail_cleanly(run_id, brief):
